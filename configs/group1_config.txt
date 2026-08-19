@@ -1,0 +1,27 @@
+Team: Group 1
+Project: Project 13
+Project Title: Wiring the Data Centre: Interconnection Networks for a Simulated Accra Warehouse-Scale Cluster
+
+Node Count: 16
+Ring Nodes: 16
+Mesh Dimensions: 4 x 4
+
+Traffic Patterns:
+- Uniform Random
+- Hot-Node Skewed
+
+Ring Routing:
+- Shortest Path Routing
+
+Mesh Routing:
+- Dimension-Order Routing
+
+Traffic Seed: 1301
+
+Primary Tools:
+- C/C++
+- Python
+
+Secondary Tools:
+- Graphviz
+- MATLAB
