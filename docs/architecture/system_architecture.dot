@@ -1,0 +1,34 @@
+digraph SystemArchitecture {
+    rankdir=TB;
+    splines=ortho;
+    nodesep=0.6;
+    ranksep=0.8;
+
+    node [shape=box, style="rounded", width=2.8, height=0.8];
+
+    config [label="Configuration Input\nNode Count\nTopology\nInjection Rate\nTraffic Pattern\nRandom Seed"];
+
+    traffic [label="Traffic Generator\nUniform Random\nHot-Node Skewed"];
+
+    packet [label="Packet / Flit Generator\nSource + Destination\nPacket-to-Flit Conversion"];
+
+    network [label="Network Simulator\nRing / 2D Mesh\nRouters\nQueues\nLinks"];
+
+    routing [label="Routing Engine\nRing Shortest Path\nDimension-Order Routing"];
+
+    metrics [label="Metrics Collector\nAverage Latency\nThroughput\nPacket Delivery/Loss\nSaturation Rate"];
+
+    python [label="Python Analysis\nProcess Results\nGenerate Plots"];
+
+    matlab [label="MATLAB Model\nDiameter\nBisection Bandwidth\nLatency / Saturation Model"];
+
+    config -> traffic;
+    traffic -> packet;
+    packet -> network;
+    network -> routing;
+    routing -> network;
+    network -> metrics;
+
+    metrics -> python;
+    metrics -> matlab;
+}
