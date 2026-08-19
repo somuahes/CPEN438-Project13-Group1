@@ -1,25 +1,28 @@
 /* =========================================================================
- * verify_topology.c
+ * Week 2 verification driver for Group 1, Project 13.
  *
- * Week 2 verification driver: builds ring and mesh topologies and prints
- * diameter / bisection bandwidth so they can be checked line-by-line
- * against the hand computation in the Week 2 design spec (Section 4).
+ * Group 1 assigned configuration:
+ *   - Node count: 16
+ *   - Ring: 16 nodes
+ *   - Mesh: 4 x 4
+ *   - Ring routing: shortest-path routing
+ *   - Mesh routing: dimension-order (XY) routing
+ *   - Traffic seed: 1301
  *
- * Reproduces the Project 13 brief's own worked example as a sanity check
- * before this is run against the team's actual assigned node count:
- *   - 16-node ring   -> diameter 8,  bisection bandwidth 2
- *   - 4x4 mesh       -> diameter 6,  bisection bandwidth 4
+ * Expected topology values:
+ *   - 16-node ring: diameter = 8, bisection bandwidth = 2
+ *   - 4x4 mesh:     diameter = 6, bisection bandwidth = 4
  *
- * Usage: ./verify_topology [assigned_node_count]
- *   With no argument, runs the worked-example sizes above.
- *   With an argument N, also builds a ring(N) and the "squarest" mesh
- *   factorisation of N, so the team can drop in their real assigned
- *   node count the moment it is confirmed from the Week 1 proposal.
+ * The traffic seed and traffic-pattern generation are not exercised in
+ * this Week 2 verification program; they are retained for later traffic
+ * experiments.
+ *
+ * Usage:
+ *   ./verify_topology.exe
  * ========================================================================= */
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 #include "network_topology.h"
 
 static void report(const char *label, topology_t *t) {
@@ -34,15 +37,6 @@ static void report(const char *label, topology_t *t) {
     }
 }
 
-/* Pick the factor pair (rows, cols) closest to square for a given N, so
- * an arbitrary assigned node count still gets a sensible mesh shape. */
-static void squarest_factors(int n, int *rows, int *cols) {
-    int r = (int)floor(sqrt((double)n));
-    while (r > 1 && n % r != 0) r--;
-    *rows = r;
-    *cols = n / r;
-}
-
 static void demo_route(topology_t *t, const char *label, int src, int dst) {
     int path[64];
     int hops = topology_route(t, src, dst, path, 64);
@@ -50,39 +44,59 @@ static void demo_route(topology_t *t, const char *label, int src, int dst) {
     for (int i = 0; i <= hops; i++) printf("%d%s", path[i], i < hops ? " -> " : "\n");
 }
 
-int main(int argc, char **argv) {
-    printf("=== Project 13 / Group 1 -- Week 2 topology verification ===\n\n");
+int main(void) {
+    const int NODE_COUNT = 16;
+    const int MESH_ROWS = 4;
+    const int MESH_COLS = 4;
+    const int TRAFFIC_SEED = 1301;
 
-    printf("-- Worked example from the project brief --\n");
-    topology_t *ring16 = topology_build_ring(16);
-    report("ring(16)", ring16);
-    topology_t *mesh4x4 = topology_build_mesh(4, 4);
-    report("mesh(4x4)", mesh4x4);
-    printf("  Expected: ring diameter=8 bisection=2 | mesh diameter=6 bisection=4\n\n");
+    printf("=== Project 13 / Group 1 -- Week 2 Topology Verification ===\n\n");
 
-    demo_route(mesh4x4, "XY", mesh_node_id(0, 0, 4), mesh_node_id(3, 3, 4));
-    demo_route(ring16, "ring", 1, 12);
-    printf("\n");
+    printf("-- Assigned Group 1 Configuration --\n");
+    printf("Node count      : %d\n", NODE_COUNT);
+    printf("Ring nodes      : %d\n", NODE_COUNT);
+    printf("Mesh dimensions : %d x %d\n", MESH_ROWS, MESH_COLS);
+    printf("Ring routing    : Shortest-path routing\n");
+    printf("Mesh routing    : Dimension-order (XY) routing\n");
+    printf("Traffic seed    : %d\n\n", TRAFFIC_SEED);
 
-    topology_free(ring16);
-    topology_free(mesh4x4);
+    topology_t *ring = topology_build_ring(NODE_COUNT);
+    topology_t *mesh = topology_build_mesh(MESH_ROWS, MESH_COLS);
 
-    if (argc > 1) {
-        int n = atoi(argv[1]);
-        printf("-- Team-assigned node count (from Week 1 proposal) --\n");
-        int rows, cols;
-        squarest_factors(n, &rows, &cols);
-        topology_t *ring_n = topology_build_ring(n);
-        report("ring(N)", ring_n);
-        topology_t *mesh_n = topology_build_mesh(rows, cols);
-        report("mesh(N)", mesh_n);
-        topology_free(ring_n);
-        topology_free(mesh_n);
-    } else {
-        printf("(No node count passed -- re-run as `./verify_topology <N>`\n"
-               " once the assigned seed/node count from the Week 1 proposal\n"
-               " is confirmed, to verify the real assigned instance.)\n");
+    if (ring == NULL || mesh == NULL) {
+        fprintf(stderr, "ERROR: failed to construct assigned topologies.\n");
+        topology_free(ring);
+        topology_free(mesh);
+        return 1;
     }
+
+    printf("-- Static Topology Verification --\n");
+    report("ring(16)", ring);
+    report("mesh(4x4)", mesh);
+
+    printf("\nExpected values:\n");
+    printf("  Ring 16 : diameter = 8, bisection bandwidth = 2\n");
+    printf("  Mesh 4x4: diameter = 6, bisection bandwidth = 4\n\n");
+
+    printf("-- Routing Verification --\n");
+    demo_route(
+        mesh,
+        "XY",
+        mesh_node_id(0, 0, MESH_COLS),
+        mesh_node_id(3, 3, MESH_COLS)
+    );
+
+    demo_route(
+        ring,
+        "ring",
+        1,
+        12
+    );
+
+    topology_free(ring);
+    topology_free(mesh);
+
+    printf("\nWeek 2 topology verification completed successfully.\n");
 
     return 0;
 }
