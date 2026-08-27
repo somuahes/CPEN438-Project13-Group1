@@ -75,6 +75,30 @@ topology_t *topology_build_mesh(int rows, int cols) {
     return t;
 }
 
+topology_t *topology_build_torus(int rows, int cols) {
+    if (rows < 1 || cols < 1) return NULL;
+    int num_nodes = rows * cols;
+    topology_t *t = alloc_topology(TOPO_TORUS, num_nodes, rows, cols, 4);
+
+    /* A dimension of extent 2 already has its two nodes joined by the mesh
+     * edge; wrapping it would add a second, parallel link between the same
+     * pair, which rev_port's first-match lookup cannot tell apart. Extent 1
+     * would be a self-loop. Either way the dimension is left unwrapped. */
+    int wrap_rows = (rows >= 3);
+    int wrap_cols = (cols >= 3);
+
+    for (int r = 0; r < rows; r++) {
+        for (int c = 0; c < cols; c++) {
+            int id = mesh_node_id(r, c, cols);
+            if (c + 1 < cols)      add_edge(t, id, mesh_node_id(r, c + 1, cols));
+            else if (wrap_cols)    add_edge(t, id, mesh_node_id(r, 0, cols));
+            if (r + 1 < rows)      add_edge(t, id, mesh_node_id(r + 1, c, cols));
+            else if (wrap_rows)    add_edge(t, id, mesh_node_id(0, c, cols));
+        }
+    }
+    return t;
+}
+
 void topology_free(topology_t *t) {
     if (!t) return;
     for (int i = 0; i < t->num_nodes; i++) free(t->adj[i]);
@@ -162,8 +186,17 @@ int topology_bisection_bandwidth(const topology_t *t) {
         if (t->num_nodes < 3) return t->num_nodes - 1; /* degenerate n=2 */
         return 2;
     }
-    /* TOPO_MESH */
-    return (t->rows < t->cols) ? t->rows : t->cols;
+
+    int min_dim = (t->rows < t->cols) ? t->rows : t->cols;
+    if (t->type == TOPO_MESH) return min_dim;
+
+    /* TOPO_TORUS: a cut perpendicular to a wrapped dimension severs both the
+     * direct and the wraparound link in each of the min_dim lines, hence
+     * 2 x min_dim. A dimension left unwrapped (extent < 3) contributes only
+     * its direct links, so the cut across it is the mesh value. */
+    int vertical   = t->rows * ((t->cols >= 3) ? 2 : 1);  /* cut between columns */
+    int horizontal = t->cols * ((t->rows >= 3) ? 2 : 1);  /* cut between rows    */
+    return (vertical < horizontal) ? vertical : horizontal;
 }
 
 /* ------------------------------------------------------------------- */
@@ -198,6 +231,53 @@ int mesh_route_xy(const topology_t *t, int src, int dst, int *path, int max_len)
     return hops;
 }
 
+/* Shortest way round one wrapped dimension of extent `n`. Returns the hop
+ * count and writes the step direction (+1 / -1) to *step. Ties break to the
+ * increasing direction so the path is a deterministic function of (from, to)
+ * alone -- never of congestion. An unwrapped dimension (n < 3) can only be
+ * walked directly. */
+static int dim_steps(int from, int to, int n, int wrapped, int *step) {
+    if (from == to) { *step = 0; return 0; }
+    if (!wrapped) {
+        *step = (to > from) ? 1 : -1;
+        return (to > from) ? (to - from) : (from - to);
+    }
+    int up   = (to - from + n) % n;
+    int down = (from - to + n) % n;
+    *step = (up <= down) ? 1 : -1;
+    return (up <= down) ? up : down;
+}
+
+int torus_route_dor(const topology_t *t, int src, int dst, int *path, int max_len) {
+    int r1, c1, r2, c2;
+    mesh_node_coords(src, t->cols, &r1, &c1);
+    mesh_node_coords(dst, t->cols, &r2, &c2);
+
+    int wrap_rows = (t->rows >= 3), wrap_cols = (t->cols >= 3);
+    int cstep, rstep;
+    int chops = dim_steps(c1, c2, t->cols, wrap_cols, &cstep);
+    int rhops = dim_steps(r1, r2, t->rows, wrap_rows, &rstep);
+
+    int hops = 0;
+    if (hops >= max_len) return -1;
+    path[hops] = src;
+
+    int r = r1, c = c1;
+    for (int i = 0; i < chops; i++) {          /* X dimension first */
+        c = (c + cstep + t->cols) % t->cols;
+        hops++;
+        if (hops >= max_len) return -1;
+        path[hops] = mesh_node_id(r, c, t->cols);
+    }
+    for (int i = 0; i < rhops; i++) {          /* then Y */
+        r = (r + rstep + t->rows) % t->rows;
+        hops++;
+        if (hops >= max_len) return -1;
+        path[hops] = mesh_node_id(r, c, t->cols);
+    }
+    return hops;
+}
+
 int ring_route_shortest(const topology_t *t, int src, int dst, int *path, int max_len) {
     int n = t->num_nodes;
     int cw_hops  = (dst - src + n) % n;         /* clockwise (increasing id) */
@@ -217,6 +297,11 @@ int ring_route_shortest(const topology_t *t, int src, int dst, int *path, int ma
 }
 
 int topology_route(const topology_t *t, int src, int dst, int *path, int max_len) {
-    if (t->type == TOPO_MESH) return mesh_route_xy(t, src, dst, path, max_len);
-    return ring_route_shortest(t, src, dst, path, max_len);
+    switch (t->type) {
+        case TOPO_MESH:  return mesh_route_xy(t, src, dst, path, max_len);
+        case TOPO_TORUS: return torus_route_dor(t, src, dst, path, max_len);
+        case TOPO_RING:  return ring_route_shortest(t, src, dst, path, max_len);
+    }
+    fprintf(stderr, "FATAL: no routing function for topology type %d\n", (int)t->type);
+    exit(2);
 }

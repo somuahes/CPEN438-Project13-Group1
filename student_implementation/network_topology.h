@@ -17,8 +17,9 @@
 #define NETWORK_TOPOLOGY_H
 
 typedef enum {
-    TOPO_RING = 0,
-    TOPO_MESH = 1
+    TOPO_RING  = 0,
+    TOPO_MESH  = 1,
+    TOPO_TORUS = 2
 } topology_type_t;
 
 /* Adjacency-list graph representation. Works for any topology; the ring
@@ -39,6 +40,15 @@ typedef struct {
 /* ---- Construction / teardown ---------------------------------------- */
 topology_t *topology_build_ring(int num_nodes);
 topology_t *topology_build_mesh(int rows, int cols);
+
+/* Folded torus: the mesh plus wraparound links, so every row and every
+ * column is a ring. "Folded" refers to the physical layout only -- the
+ * adjacency, diameter and bisection are those of a plain torus.
+ *
+ * A dimension of extent < 3 is left unwrapped: its wraparound link would
+ * duplicate the edge the mesh already provides, and the parallel link
+ * would alias in the simulator's reverse-port lookup. */
+topology_t *topology_build_torus(int rows, int cols);
 void        topology_free(topology_t *t);
 
 /* ---- Mesh coordinate helpers (row-major indexing) --------------------
@@ -61,10 +71,15 @@ int topology_bisection_bandwidth(const topology_t *t);
  *
  * mesh_route_xy: dimension-order (X-then-Y) routing -- move along
  *   columns first until the column matches, then along rows.
+ * torus_route_dor: the same dimension order, but each dimension takes the
+ *   shorter way round the ring. Ties (exactly half way) break to the
+ *   increasing direction, deterministically -- the routing stays strictly
+ *   single-path, never choosing a path on congestion.
  * ring_route_shortest: shortest-direction routing on the ring (clockwise
  *   or counter-clockwise, whichever is fewer hops).
  * topology_route: dispatches to the correct routine based on t->type.   */
 int mesh_route_xy(const topology_t *t, int src, int dst, int *path, int max_len);
+int torus_route_dor(const topology_t *t, int src, int dst, int *path, int max_len);
 int ring_route_shortest(const topology_t *t, int src, int dst, int *path, int max_len);
 int topology_route(const topology_t *t, int src, int dst, int *path, int max_len);
 
