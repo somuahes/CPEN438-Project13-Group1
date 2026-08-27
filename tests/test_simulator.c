@@ -345,6 +345,27 @@ static int test_class_isolation_neutral_under_uniform(void) {
     return 0;
 }
 
+/* ---- 13. Node count beyond the old fixed 64-node scratch limit -------- */
+
+static int test_large_node_count(void) {
+    topology_t *m = topology_build_mesh(8, 9);      /* 72 nodes */
+    CHECK(m != NULL);
+    CHECK(m->num_nodes == 72);
+
+    sim_t *s = sim_create(m, TRAFFIC_UNIFORM, SEED, HOT_FRACTION, HOT_NODES,
+                          VC_MODE_BASELINE);
+    sim_run(s, 0.10, 200L, 1000L, 5000L);
+
+    CHECK(sim_check_conservation(s));
+    CHECK(s->st.delivered > 0);
+    CHECK(s->st.dropped_full == 0);
+    CHECK(sim_avg_hops(s) > 1.0);
+
+    sim_free(s);
+    topology_free(m);
+    return 0;
+}
+
 /* ---- Main ------------------------------------------------------------ */
 
 int main(void) {
@@ -361,9 +382,10 @@ int main(void) {
     failures += test_vc_mode_configuration();
     failures += test_class_isolation_removes_hol_blocking();
     failures += test_class_isolation_neutral_under_uniform();
+    failures += test_large_node_count();
 
     if (failures == 0) {
-        printf("ALL TESTS PASSED (%d checks across 12 test functions)\n", tests_run);
+        printf("ALL TESTS PASSED (%d checks across 13 test functions)\n", tests_run);
         return 0;
     }
     printf("%d test function(s) FAILED\n", failures);

@@ -185,6 +185,13 @@ typedef struct {
     long peak_queue;           /* deepest source queue seen                */
 } sim_stats_t;
 
+/* ---- Switch-allocation grant ------------------------------------------ */
+typedef struct {
+    int n, p, v;          /* source: node, input port, input VC          */
+    int op;               /* output port (EJECT_PORT for ejection)       */
+    int m, q, ov;         /* destination: node, input port, VC           */
+} move_t;
+
 /* ---- Simulator -------------------------------------------------------- */
 typedef struct {
     const topology_t *topo;
@@ -193,6 +200,13 @@ typedef struct {
     vc_mode_t  vc_mode;
 
     router_t  *rt;
+
+    /* Per-cycle scratch, allocated for num_nodes. space[] and req_op[] are
+     * [node][port][vc] flattened via sim_scratch_idx(). */
+    int       *space;
+    int       *req_op;
+    move_t    *moves;
+
     int      **rev_port;   /* rev_port[n][p]: port on adj[n][p] facing n   */
     int      **nh_port;    /* nh_port[n][d]: output port from n toward d,  */
                            /* or EJECT_PORT when n == d                    */

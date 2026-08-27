@@ -28,6 +28,10 @@ int vc_mode_queues(vc_mode_t m) {
     return (m == VC_MODE_QCLASS || m == VC_MODE_CLASS) ? 2 : 1;
 }
 
+static int sim_scratch_idx(int node, int port, int vc) {
+    return (node * MAX_PORTS + port) * MAX_VCS + vc;
+}
+
 static void *xcalloc(size_t n, size_t sz) {
     void *p = calloc(n, sz);
     if (!p) { fprintf(stderr, "FATAL: out of memory\n"); exit(2); }
@@ -49,6 +53,9 @@ sim_t *sim_create(const topology_t *t, traffic_type_t traffic,
     s->vc_mode   = mode;
     s->vcs       = vc_mode_vcs(mode);
     s->rt        = (router_t *)xcalloc((size_t)n, sizeof(router_t));
+    s->space     = (int *)xcalloc((size_t)n * MAX_PORTS * MAX_VCS, sizeof(int));
+    s->req_op    = (int *)xcalloc((size_t)n * MAX_PORTS * MAX_VCS, sizeof(int));
+    s->moves     = (move_t *)xcalloc((size_t)n * NUM_OUT_PORTS * EJECT_BW, sizeof(move_t));
 
     s->rev_port = (int **)xcalloc((size_t)n, sizeof(int *));
     s->nh_port  = (int **)xcalloc((size_t)n, sizeof(int *));
@@ -123,6 +130,7 @@ void sim_free(sim_t *s) {
         free(s->q[i * 2]); free(s->q[i * 2 + 1]);
     }
     free(s->rev_port); free(s->nh_port); free(s->cross);
+    free(s->space); free(s->req_op); free(s->moves);
     free(s->q); free(s->q_head); free(s->q_count);
     free(s->rt);
     free(s);
@@ -193,12 +201,6 @@ static void vc_push(vc_t *vc, const flit_t *f) {
 /* One simulation cycle                                                */
 /* ------------------------------------------------------------------- */
 
-typedef struct {
-    int n, p, v;          /* source: node, input port, input VC          */
-    int op;               /* output port (EJECT_PORT for ejection)       */
-    int m, q, ov;         /* destination: node, input port, VC           */
-} move_t;
-
 void sim_step(sim_t *s) {
     const topology_t *t = s->topo;
     int n = s->num_nodes;
@@ -206,18 +208,18 @@ void sim_step(sim_t *s) {
     /* ---- Phase 0: credit snapshot (start-of-cycle buffer occupancy) --
      * Taken before any movement so that a flit cannot be forwarded
      * through two routers within the same cycle. */
-    static int space[64][MAX_PORTS][MAX_VCS];
+    int *space = s->space;
     for (int i = 0; i < n; i++)
         for (int p = 0; p < MAX_PORTS; p++)
             for (int v = 0; v < s->vcs; v++)
-                space[i][p][v] = VC_BUF_FLITS - s->rt[i].in[p][v].count;
+                space[sim_scratch_idx(i, p, v)] = VC_BUF_FLITS - s->rt[i].in[p][v].count;
 
     /* ---- Phase 1: route computation + VC allocation ------------------ */
-    static int req_op[64][MAX_PORTS][MAX_VCS];
+    int *req_op = s->req_op;
     for (int i = 0; i < n; i++)
         for (int p = 0; p < MAX_PORTS; p++)
             for (int v = 0; v < s->vcs; v++)
-                req_op[i][p][v] = -1;
+                req_op[sim_scratch_idx(i, p, v)] = -1;
 
     for (int i = 0; i < n; i++) {
         for (int p = 0; p < MAX_PORTS; p++) {
@@ -247,13 +249,13 @@ void sim_step(sim_t *s) {
                         vc->out_vc   = ov;
                     }
                 }
-                req_op[i][p][v] = vc->out_port;
+                req_op[sim_scratch_idx(i, p, v)] = vc->out_port;
             }
         }
     }
 
     /* ---- Phase 2: switch allocation (round-robin per output port) ---- */
-    static move_t moves[64 * NUM_OUT_PORTS * EJECT_BW];
+    move_t *moves = s->moves;
     int nmoves = 0;
 
     for (int i = 0; i < n; i++) {
@@ -268,7 +270,7 @@ void sim_step(sim_t *s) {
                 int idx = (start + k) % slots;
                 int p = idx / MAX_VCS, v = idx % MAX_VCS;
                 if (v >= s->vcs) continue;
-                if (req_op[i][p][v] != op) continue;
+                if (req_op[sim_scratch_idx(i, p, v)] != op) continue;
 
                 vc_t *vc = &s->rt[i].in[p][v];
                 if (op == EJECT_PORT) {
@@ -280,8 +282,8 @@ void sim_step(sim_t *s) {
                     int m  = t->adj[i][op];
                     int q  = s->rev_port[i][op];
                     int ov = vc->out_vc;
-                    if (space[m][q][ov] <= 0) continue;   /* no credit     */
-                    space[m][q][ov]--;
+                    if (space[sim_scratch_idx(m, q, ov)] <= 0) continue;   /* no credit     */
+                    space[sim_scratch_idx(m, q, ov)]--;
                     moves[nmoves].n = i; moves[nmoves].p = p; moves[nmoves].v = v;
                     moves[nmoves].op = op;
                     moves[nmoves].m = m; moves[nmoves].q = q; moves[nmoves].ov = ov;
