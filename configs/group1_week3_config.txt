@@ -1,0 +1,58 @@
+# =====================================================================
+# Project 13 -- Wiring the Data Centre
+# CPEN 438, Group 1 -- assigned configuration and Week 3 run parameters
+#
+# Every value the simulator depends on is recorded here so that any run
+# can be reproduced exactly (Project 13, Section G: "node count,
+# topology, routing algorithm, and traffic seed all recorded per run").
+# =====================================================================
+
+# ---- Assigned configuration (fixed in Week 1, verified in Week 2) ----
+node_count              = 16
+ring_nodes              = 16
+mesh_rows               = 4
+mesh_cols               = 4
+ring_routing            = shortest-direction (clockwise on ties)
+mesh_routing            = deterministic dimension-order (X then Y)
+traffic_seed            = 1301
+
+# ---- Week 2 verified static metrics ---------------------------------
+ring_diameter           = 8
+ring_bisection_links    = 2
+mesh_diameter           = 6
+mesh_bisection_links    = 4
+
+# ---- Week 3 traffic generation --------------------------------------
+traffic_patterns        = uniform, hotnode
+hot_node_count          = 2
+hot_nodes               = 5, 1          # derived from seed 1301, not hard-coded
+hot_traffic_fraction    = 0.50
+rng                     = xorshift64* seeded via SplitMix64
+
+# ---- Week 3 flit-level network model --------------------------------
+packet_size_flits       = 4             # 1 head, 2 body, 1 tail
+link_bandwidth          = 1 flit/cycle/direction
+router_delay            = 1 cycle/hop
+vc_buffer_depth_flits   = 4
+eject_bandwidth_flits   = 4
+flow_control            = credit-based wormhole
+ring_deadlock_avoidance = dateline VC rule across the node 15 <-> 0 link
+source_queue_capacity   = 1024 packets per node (total, split across classes)
+
+# ---- Week 3 VC configurations ---------------------------------------
+mode_baseline_vc2       = 2 VCs/port, 1 shared source queue
+mode_vc4_plain          = 4 VCs/port, 1 shared source queue   (control A)
+mode_vc2_qclass         = 2 VCs/port, 2 class source queues   (control B)
+mode_vc4_class          = 4 VCs/port, 2 class source queues   (innovation)
+
+# ---- Week 3 experiment parameters -----------------------------------
+warmup_cycles           = 3000
+measurement_cycles      = 12000
+drain_cap_cycles        = 30000
+injection_rates         = 0.02 0.05 0.08 0.11 0.14 0.17 0.20 0.24 0.28 \
+                          0.32 0.36 0.40 0.45 0.50 0.55 0.60 0.70 0.80
+saturation_criterion    = accepted < 0.95 x offered, or any dropped packet
+
+# ---- Build ----------------------------------------------------------
+compiler                = gcc
+compiler_flags          = -O2 -Wall -Wextra -std=c11

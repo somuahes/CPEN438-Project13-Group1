@@ -1,0 +1,5 @@
+topology,traffic,diameter,bisection_bandwidth_links,avg_hops_model,zero_load_latency_measured,saturation_rate_measured,peak_accepted_throughput,latency_at_0.20
+ring,uniform,8,2,4.267,8.57,0.28,0.2724,18.63
+ring,hotnode,8,2,4.267,8.56,0.20,0.2416,174.73
+mesh,uniform,6,4,2.667,6.88,0.70,0.7239,7.86
+mesh,hotnode,6,4,2.533,6.73,0.20,0.3849,23.09
