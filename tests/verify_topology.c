@@ -37,6 +37,15 @@ static void demo_route(topology_t *t, const char *label, int src, int dst) {
     free(path);
 }
 
+static void usage(const char *prog) {
+    printf("Usage: %s [options]\n"
+           "  --config PATH  parameter file (default %s)\n"
+           "  --nodes N      ring node count\n"
+           "  --rows R       mesh rows\n"
+           "  --cols C       mesh columns\n"
+           "  --help\n", prog, SIM_CONFIG_DEFAULT);
+}
+
 int main(int argc, char **argv) {
     sim_config_t cfg;
     sim_config_defaults(&cfg);
@@ -47,11 +56,25 @@ int main(int argc, char **argv) {
         if (!strcmp(argv[i], "--config")) { cfg_path = argv[i + 1]; cfg_explicit = 1; }
     if (!sim_config_load(&cfg, cfg_path, cfg_explicit)) return 1;
 
-    for (int i = 1; i + 1 < argc; i++) {
-        if      (!strcmp(argv[i], "--nodes")) cfg.node_count = atoi(argv[++i]);
-        else if (!strcmp(argv[i], "--rows"))  cfg.mesh_rows  = atoi(argv[++i]);
-        else if (!strcmp(argv[i], "--cols"))  cfg.mesh_cols  = atoi(argv[++i]);
+    /* Unknown or valueless options are rejected rather than skipped: a
+     * mistyped node count must not report a confident pass on the
+     * default configuration. */
+    for (int i = 1; i < argc; i++) {
+        const char *a = argv[i];
+        int has_val = (i + 1 < argc);
+        if (!strcmp(a, "--help") || !strcmp(a, "-h")) { usage(argv[0]); return 0; }
+        else if (!strcmp(a, "--config") && has_val) i++;
+        else if (!strcmp(a, "--nodes")  && has_val) cfg.node_count = atoi(argv[++i]);
+        else if (!strcmp(a, "--rows")   && has_val) cfg.mesh_rows  = atoi(argv[++i]);
+        else if (!strcmp(a, "--cols")   && has_val) cfg.mesh_cols  = atoi(argv[++i]);
+        else {
+            fprintf(stderr, "unknown or incomplete option: %s\n", a);
+            usage(argv[0]);
+            return 1;
+        }
     }
+
+    if (!sim_config_validate(&cfg)) return 1;
 
     printf("=== Project 13 / Group 1 -- Topology Verification ===\n\n");
     printf("-- Configuration (%s) --\n", cfg_path);

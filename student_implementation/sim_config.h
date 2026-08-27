@@ -30,6 +30,12 @@ typedef struct {
 
 void sim_config_defaults(sim_config_t *c);
 
+/* Rejects out-of-range values with a message on stderr. Returns 1 if the
+ * configuration is usable. Drivers must call this before building
+ * topologies: an unvalidated hot_node_count of 0, for instance, silently
+ * aims the whole hot share at node 0 while classifying none of it as hot. */
+int  sim_config_validate(const sim_config_t *c);
+
 /* Parses `key = value`, honouring '#' comments and a trailing '\' that
  * continues onto the next line. Returns 1 on success. A missing file is
  * an error only when `required`. */

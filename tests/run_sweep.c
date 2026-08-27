@@ -96,17 +96,19 @@ int main(int argc, char **argv) {
     int pa = cfg_parse_args(&cfg, argc, argv);
     if (pa <= 0) return pa < 0 ? 1 : 0;
 
-    if (cfg.nrates == 0) { fprintf(stderr, "FATAL: no injection rates\n"); return 1; }
     if (!cfg.do_ring && !cfg.do_mesh) { fprintf(stderr, "FATAL: no topology selected\n"); return 1; }
+    if (!sim_config_validate(&cfg)) return 1;
 
-    topology_t *ring = topology_build_ring(cfg.node_count);
-    topology_t *mesh = topology_build_mesh(cfg.mesh_rows, cfg.mesh_cols);
-    if (!ring || !mesh) { fprintf(stderr, "FATAL: topology build failed\n"); return 1; }
+    topology_t *ring = cfg.do_ring ? topology_build_ring(cfg.node_count) : NULL;
+    topology_t *mesh = cfg.do_mesh ? topology_build_mesh(cfg.mesh_rows, cfg.mesh_cols) : NULL;
+    if ((cfg.do_ring && !ring) || (cfg.do_mesh && !mesh)) {
+        fprintf(stderr, "FATAL: topology build failed\n"); return 1;
+    }
 
-    int ring_diam = topology_diameter(ring);
-    int ring_bis  = topology_bisection_bandwidth(ring);
-    int mesh_diam = topology_diameter(mesh);
-    int mesh_bis  = topology_bisection_bandwidth(mesh);
+    int ring_diam = ring ? topology_diameter(ring) : 0;
+    int ring_bis  = ring ? topology_bisection_bandwidth(ring) : 0;
+    int mesh_diam = mesh ? topology_diameter(mesh) : 0;
+    int mesh_bis  = mesh ? topology_bisection_bandwidth(mesh) : 0;
 
     /* Closed-form expectations for the configured size. The gate is kept
      * from Week 2 but is now derived rather than hard-coded to 16 nodes,
@@ -126,25 +128,35 @@ int main(int argc, char **argv) {
            cfg.warmup, cfg.measure, cfg.drain_max);
 
     printf("-- Static metrics re-verified --\n");
-    printf("  ring(%d) : diameter=%d  bisection=%d   (expected %d / %d)\n",
-           cfg.node_count, ring_diam, ring_bis, exp_ring_diam, exp_ring_bis);
-    printf("  mesh(%dx%d): diameter=%d  bisection=%d   (expected %d / %d)\n\n",
-           cfg.mesh_rows, cfg.mesh_cols, mesh_diam, mesh_bis, exp_mesh_diam, exp_mesh_bis);
-    if (ring_diam != exp_ring_diam || ring_bis != exp_ring_bis ||
-        mesh_diam != exp_mesh_diam || mesh_bis != exp_mesh_bis) {
+    if (ring)
+        printf("  ring(%d) : diameter=%d  bisection=%d   (expected %d / %d)\n",
+               cfg.node_count, ring_diam, ring_bis, exp_ring_diam, exp_ring_bis);
+    if (mesh)
+        printf("  mesh(%dx%d): diameter=%d  bisection=%d   (expected %d / %d)\n",
+               cfg.mesh_rows, cfg.mesh_cols, mesh_diam, mesh_bis, exp_mesh_diam, exp_mesh_bis);
+    printf("\n");
+    if ((ring && (ring_diam != exp_ring_diam || ring_bis != exp_ring_bis)) ||
+        (mesh && (mesh_diam != exp_mesh_diam || mesh_bis != exp_mesh_bis))) {
         fprintf(stderr, "FATAL: static metrics no longer verify -- aborting.\n");
         return 1;
     }
 
-    {   /* Report the seed-derived hot-node set once. */
+    /* The hot set is derived from the seed AND the node count, so it is
+     * reported per topology: ring and mesh need not be the same size. */
+    printf("-- Hot-node (database) set derived from seed %u --\n", cfg.seed);
+    for (int k = 0; k < 2; k++) {
+        const topology_t *t = k ? mesh : ring;
+        if (!t) continue;
         traffic_t tmp;
-        traffic_init(&tmp, TRAFFIC_HOTNODE, cfg.node_count, cfg.seed, cfg.hot_fraction, cfg.hot_nodes);
-        printf("-- Hot-node (database) set derived from seed %u --\n", cfg.seed);
-        printf("  hot nodes = {");
+        traffic_init(&tmp, TRAFFIC_HOTNODE, t->num_nodes, cfg.seed,
+                     cfg.hot_fraction, cfg.hot_nodes);
+        if (k) printf("  mesh(%dx%d): hot nodes = {", cfg.mesh_rows, cfg.mesh_cols);
+        else   printf("  ring(%d): hot nodes = {", t->num_nodes);
         for (int i = 0; i < tmp.num_hot; i++)
             printf("%d%s", tmp.hot[i], i + 1 < tmp.num_hot ? ", " : "");
-        printf("}   share of all traffic = %.0f%%\n\n", cfg.hot_fraction * 100.0);
+        printf("}\n");
     }
+    printf("  share of all traffic = %.0f%%\n\n", cfg.hot_fraction * 100.0);
 
     config_t cfgs[] = {
         /* Part A -- the required ring-vs-mesh comparison (baseline flow control) */

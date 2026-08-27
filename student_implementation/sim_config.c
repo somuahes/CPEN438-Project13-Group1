@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "sim_config.h"
+#include "traffic.h"
 
 void sim_config_defaults(sim_config_t *c) {
     memset(c, 0, sizeof(*c));
@@ -44,6 +45,9 @@ int sim_config_load(sim_config_t *c, const char *path, int required) {
         if (required) fprintf(stderr, "FATAL: cannot open config %s\n", path);
         return required ? 0 : 1;
     }
+    int node_count = c->node_count, ring_nodes = c->node_count;
+    int seen_nc = 0, seen_rn = 0;
+
     char line[1024], acc[4096];
     while (fgets(line, sizeof(line), f)) {
         acc[0] = 0;
@@ -66,8 +70,8 @@ int sim_config_load(sim_config_t *c, const char *path, int required) {
         char *k = trim(acc), *v = trim(eq + 1);
         if (!*k || !*v) continue;
 
-        if      (!strcmp(k, "node_count"))            c->node_count = atoi(v);
-        else if (!strcmp(k, "ring_nodes"))            c->node_count = atoi(v);
+        if      (!strcmp(k, "node_count"))          { node_count = atoi(v); seen_nc = 1; }
+        else if (!strcmp(k, "ring_nodes"))          { ring_nodes = atoi(v); seen_rn = 1; }
         else if (!strcmp(k, "mesh_rows"))             c->mesh_rows = atoi(v);
         else if (!strcmp(k, "mesh_cols"))             c->mesh_cols = atoi(v);
         else if (!strcmp(k, "traffic_seed"))          c->seed = (unsigned)strtoul(v, NULL, 10);
@@ -81,6 +85,43 @@ int sim_config_load(sim_config_t *c, const char *path, int required) {
             c->nrates = sim_config_parse_rates(v, c->rates, SIM_CONFIG_MAX_RATES);
     }
     fclose(f);
+
+    if (seen_nc && seen_rn && node_count != ring_nodes) {
+        fprintf(stderr, "FATAL: %s sets node_count=%d but ring_nodes=%d\n",
+                path, node_count, ring_nodes);
+        return 0;
+    }
+    if (seen_rn)      c->node_count = ring_nodes;
+    else if (seen_nc) c->node_count = node_count;
+    return 1;
+}
+
+int sim_config_validate(const sim_config_t *c) {
+    const char *e = NULL;
+
+    /* Only the selected topologies are constrained, so a ring-only run is
+     * not rejected for mesh dimensions it never uses. */
+    int smallest = 0;
+    if (c->do_ring) smallest = c->node_count;
+    if (c->do_mesh) {
+        int mesh_n = c->mesh_rows * c->mesh_cols;
+        if (!smallest || mesh_n < smallest) smallest = mesh_n;
+    }
+
+    if (c->do_ring && c->node_count < 2)       e = "node_count must be >= 2";
+    else if (c->do_mesh && (c->mesh_rows < 1 || c->mesh_cols < 1))
+                                               e = "mesh_rows/mesh_cols must be >= 1";
+    else if (c->hot_nodes < 1)                 e = "hot_node_count must be >= 1";
+    else if (c->hot_nodes > MAX_HOT_NODES)     e = "hot_node_count exceeds MAX_HOT_NODES";
+    else if (smallest && c->hot_nodes > smallest) e = "hot_node_count exceeds the node count";
+    else if (c->hot_fraction < 0.0 || c->hot_fraction > 1.0) e = "hot_traffic_fraction must be in [0,1]";
+    else if (c->warmup < 0)                    e = "warmup_cycles must be >= 0";
+    else if (c->measure < 1)                   e = "measurement_cycles must be >= 1";
+    else if (c->drain_max < 0)                 e = "drain_cap_cycles must be >= 0";
+    else if (c->sat_efficiency <= 0.0 || c->sat_efficiency > 1.0) e = "saturation_efficiency must be in (0,1]";
+    else if (c->nrates < 1)                    e = "no injection rates configured";
+
+    if (e) { fprintf(stderr, "FATAL: %s\n", e); return 0; }
     return 1;
 }
 
