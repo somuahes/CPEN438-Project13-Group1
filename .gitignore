@@ -1,1 +1,8 @@
 *.exe
+
+# Week 3 build artifacts
+*.exe
+test_simulator
+run_sweep
+dump_traffic
+__pycache__/
