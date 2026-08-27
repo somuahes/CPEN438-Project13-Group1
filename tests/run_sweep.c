@@ -43,7 +43,7 @@ static void usage(const char *prog) {
            "  --rows R         mesh rows\n"
            "  --cols C         mesh columns\n"
            "  --seed S         traffic seed\n"
-           "  --topology LIST  comma-separated: ring,mesh (default both)\n"
+           "  --topology LIST  comma-separated: ring,mesh,torus (default all)\n"
            "  --rates LIST     injection rates, comma- or space-separated\n"
            "  --outdir DIR     results directory (default results)\n"
            "  --help\n", prog, SIM_CONFIG_DEFAULT);
@@ -64,8 +64,9 @@ static int cfg_parse_args(sim_config_t *c, int argc, char **argv) {
         else if (!strcmp(a, "--outdir") && has_val)  { snprintf(c->outdir, sizeof(c->outdir), "%s", v); i++; }
         else if (!strcmp(a, "--rates")  && has_val)  { c->nrates = sim_config_parse_rates(v, c->rates, SIM_CONFIG_MAX_RATES); i++; }
         else if (!strcmp(a, "--topology") && has_val) {
-            c->do_ring = (strstr(v, "ring") != NULL);
-            c->do_mesh = (strstr(v, "mesh") != NULL);
+            c->do_ring  = (strstr(v, "ring")  != NULL);
+            c->do_mesh  = (strstr(v, "mesh")  != NULL);
+            c->do_torus = (strstr(v, "torus") != NULL);
             i++;
         } else {
             fprintf(stderr, "unknown or incomplete option: %s\n", a);
@@ -96,12 +97,13 @@ int main(int argc, char **argv) {
     int pa = cfg_parse_args(&cfg, argc, argv);
     if (pa <= 0) return pa < 0 ? 1 : 0;
 
-    if (!cfg.do_ring && !cfg.do_mesh) { fprintf(stderr, "FATAL: no topology selected\n"); return 1; }
+    if (!cfg.do_ring && !cfg.do_mesh && !cfg.do_torus) { fprintf(stderr, "FATAL: no topology selected\n"); return 1; }
     if (!sim_config_validate(&cfg)) return 1;
 
-    topology_t *ring = cfg.do_ring ? topology_build_ring(cfg.node_count) : NULL;
-    topology_t *mesh = cfg.do_mesh ? topology_build_mesh(cfg.mesh_rows, cfg.mesh_cols) : NULL;
-    if ((cfg.do_ring && !ring) || (cfg.do_mesh && !mesh)) {
+    topology_t *ring  = cfg.do_ring  ? topology_build_ring(cfg.node_count) : NULL;
+    topology_t *mesh  = cfg.do_mesh  ? topology_build_mesh(cfg.mesh_rows, cfg.mesh_cols) : NULL;
+    topology_t *torus = cfg.do_torus ? topology_build_torus(cfg.mesh_rows, cfg.mesh_cols) : NULL;
+    if ((cfg.do_ring && !ring) || (cfg.do_mesh && !mesh) || (cfg.do_torus && !torus)) {
         fprintf(stderr, "FATAL: topology build failed\n"); return 1;
     }
 
@@ -109,6 +111,8 @@ int main(int argc, char **argv) {
     int ring_bis  = ring ? topology_bisection_bandwidth(ring) : 0;
     int mesh_diam = mesh ? topology_diameter(mesh) : 0;
     int mesh_bis  = mesh ? topology_bisection_bandwidth(mesh) : 0;
+    int tor_diam  = torus ? topology_diameter(torus) : 0;
+    int tor_bis   = torus ? topology_bisection_bandwidth(torus) : 0;
 
     /* Closed-form expectations for the configured size. The gate is kept
      * from Week 2 but is now derived rather than hard-coded to 16 nodes,
@@ -117,11 +121,16 @@ int main(int argc, char **argv) {
     int exp_ring_bis  = sim_config_expect_ring_bisection(&cfg);
     int exp_mesh_diam = sim_config_expect_mesh_diameter(&cfg);
     int exp_mesh_bis  = sim_config_expect_mesh_bisection(&cfg);
+    int exp_tor_diam  = sim_config_expect_torus_diameter(&cfg);
+    int exp_tor_bis   = sim_config_expect_torus_bisection(&cfg);
 
     printf("=== Project 13 / Group 1 -- Injection-Rate Sweep ===\n\n");
     printf("Config file   : %s\n", cfg_path);
-    printf("Configuration : ring(%d) and mesh(%dx%d), seed %u\n",
-           cfg.node_count, cfg.mesh_rows, cfg.mesh_cols, cfg.seed);
+    printf("Configuration : ");
+    if (ring)  printf("ring(%d) ", cfg.node_count);
+    if (mesh)  printf("mesh(%dx%d) ", cfg.mesh_rows, cfg.mesh_cols);
+    if (torus) printf("torus(%dx%d) ", cfg.mesh_rows, cfg.mesh_cols);
+    printf("| seed %u\n", cfg.seed);
     printf("Packet size   : %d flits   VC buffer: %d flits   Eject BW: %d flits/cycle\n",
            PACKET_FLITS, VC_BUF_FLITS, EJECT_BW);
     printf("Warmup/measure: %ld / %ld cycles (drain cap %ld)\n\n",
@@ -134,9 +143,13 @@ int main(int argc, char **argv) {
     if (mesh)
         printf("  mesh(%dx%d): diameter=%d  bisection=%d   (expected %d / %d)\n",
                cfg.mesh_rows, cfg.mesh_cols, mesh_diam, mesh_bis, exp_mesh_diam, exp_mesh_bis);
+    if (torus)
+        printf("  torus(%dx%d): diameter=%d  bisection=%d   (expected %d / %d)\n",
+               cfg.mesh_rows, cfg.mesh_cols, tor_diam, tor_bis, exp_tor_diam, exp_tor_bis);
     printf("\n");
     if ((ring && (ring_diam != exp_ring_diam || ring_bis != exp_ring_bis)) ||
-        (mesh && (mesh_diam != exp_mesh_diam || mesh_bis != exp_mesh_bis))) {
+        (mesh && (mesh_diam != exp_mesh_diam || mesh_bis != exp_mesh_bis)) ||
+        (torus && (tor_diam != exp_tor_diam || tor_bis != exp_tor_bis))) {
         fprintf(stderr, "FATAL: static metrics no longer verify -- aborting.\n");
         return 1;
     }
@@ -144,14 +157,15 @@ int main(int argc, char **argv) {
     /* The hot set is derived from the seed AND the node count, so it is
      * reported per topology: ring and mesh need not be the same size. */
     printf("-- Hot-node (database) set derived from seed %u --\n", cfg.seed);
-    for (int k = 0; k < 2; k++) {
-        const topology_t *t = k ? mesh : ring;
+    for (int k = 0; k < 3; k++) {
+        const topology_t *t = (k == 0) ? ring : (k == 1) ? mesh : torus;
         if (!t) continue;
         traffic_t tmp;
         traffic_init(&tmp, TRAFFIC_HOTNODE, t->num_nodes, cfg.seed,
                      cfg.hot_fraction, cfg.hot_nodes);
-        if (k) printf("  mesh(%dx%d): hot nodes = {", cfg.mesh_rows, cfg.mesh_cols);
-        else   printf("  ring(%d): hot nodes = {", t->num_nodes);
+        if (k == 0)      printf("  ring(%d): hot nodes = {", t->num_nodes);
+        else if (k == 1) printf("  mesh(%dx%d): hot nodes = {", cfg.mesh_rows, cfg.mesh_cols);
+        else             printf("  torus(%dx%d): hot nodes = {", cfg.mesh_rows, cfg.mesh_cols);
         for (int i = 0; i < tmp.num_hot; i++)
             printf("%d%s", tmp.hot[i], i + 1 < tmp.num_hot ? ", " : "");
         printf("}\n");
@@ -173,7 +187,17 @@ int main(int argc, char **argv) {
         { "mesh", TOPO_MESH, TRAFFIC_HOTNODE, VC_MODE_CLASS    },
         /* Part C -- innovation under uniform traffic (must be a no-op) */
         { "ring", TOPO_RING, TRAFFIC_UNIFORM, VC_MODE_CLASS    },
-        { "mesh", TOPO_MESH, TRAFFIC_UNIFORM, VC_MODE_CLASS    }
+        { "mesh", TOPO_MESH, TRAFFIC_UNIFORM, VC_MODE_CLASS    },
+        /* Part D -- Level-3 folded torus. Reported at both the equal-total
+         * VC budget (baseline_vc2, where the dateline rule spends half the
+         * budget on deadlock freedom) and at equal USABLE VCs per packet
+         * (vc4_plain), which is the like-for-like flow-control comparison
+         * against the mesh. */
+        { "torus", TOPO_TORUS, TRAFFIC_UNIFORM, VC_MODE_BASELINE },
+        { "torus", TOPO_TORUS, TRAFFIC_HOTNODE, VC_MODE_BASELINE },
+        { "torus", TOPO_TORUS, TRAFFIC_UNIFORM, VC_MODE_MORE     },
+        { "torus", TOPO_TORUS, TRAFFIC_HOTNODE, VC_MODE_MORE     },
+        { "torus", TOPO_TORUS, TRAFFIC_HOTNODE, VC_MODE_CLASS    }
     };
     int ncfg = (int)(sizeof(cfgs) / sizeof(cfgs[0]));
 
@@ -197,12 +221,16 @@ int main(int argc, char **argv) {
     int runs = 0;
 
     for (int c = 0; c < ncfg; c++) {
-        if (cfgs[c].topo_type == TOPO_RING && !cfg.do_ring) continue;
-        if (cfgs[c].topo_type == TOPO_MESH && !cfg.do_mesh) continue;
+        if (cfgs[c].topo_type == TOPO_RING  && !cfg.do_ring)  continue;
+        if (cfgs[c].topo_type == TOPO_MESH  && !cfg.do_mesh)  continue;
+        if (cfgs[c].topo_type == TOPO_TORUS && !cfg.do_torus) continue;
 
-        const topology_t *t = (cfgs[c].topo_type == TOPO_RING) ? ring : mesh;
-        int diam = (cfgs[c].topo_type == TOPO_RING) ? ring_diam : mesh_diam;
-        int bis  = (cfgs[c].topo_type == TOPO_RING) ? ring_bis  : mesh_bis;
+        const topology_t *t = (cfgs[c].topo_type == TOPO_RING) ? ring
+                            : (cfgs[c].topo_type == TOPO_MESH) ? mesh : torus;
+        int diam = (cfgs[c].topo_type == TOPO_RING) ? ring_diam
+                 : (cfgs[c].topo_type == TOPO_MESH) ? mesh_diam : tor_diam;
+        int bis  = (cfgs[c].topo_type == TOPO_RING) ? ring_bis
+                 : (cfgs[c].topo_type == TOPO_MESH) ? mesh_bis  : tor_bis;
 
         printf("-- %s / %s / %s --\n", cfgs[c].topo_name,
                traffic_name(cfgs[c].traffic), vc_mode_name(cfgs[c].mode));
@@ -275,5 +303,6 @@ int main(int argc, char **argv) {
 
     topology_free(ring);
     topology_free(mesh);
+    topology_free(torus);
     return conservation_failures == 0 ? 0 : 1;
 }

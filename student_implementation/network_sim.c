@@ -95,6 +95,19 @@ sim_t *sim_create(const topology_t *t, traffic_type_t traffic,
                 ((i == n - 1 && m == 0) || (i == 0 && m == n - 1))) {
                 s->cross[i][p] = 1;
             }
+            /* Torus dateline: every wraparound link, in both dimensions. */
+            if (t->type == TOPO_TORUS) {
+                int ir, ic, mr, mc;
+                mesh_node_coords(i, t->cols, &ir, &ic);
+                mesh_node_coords(m, t->cols, &mr, &mc);
+                int col_wrap = (ir == mr) && (t->cols >= 3) &&
+                               ((ic == t->cols - 1 && mc == 0) ||
+                                (ic == 0 && mc == t->cols - 1));
+                int row_wrap = (ic == mc) && (t->rows >= 3) &&
+                               ((ir == t->rows - 1 && mr == 0) ||
+                                (ir == 0 && mr == t->rows - 1));
+                if (col_wrap || row_wrap) s->cross[i][p] = 1;
+            }
         }
     }
 
@@ -160,7 +173,7 @@ static void vc_range(const sim_t *s, int hot, int dateline, int *lo, int *hi) {
         a = hot ? half : 0;
         b = a + half;
     }
-    if (s->topo->type == TOPO_RING) {
+    if (s->topo->type != TOPO_MESH) {
         int half = (b - a) / 2;
         if (half >= 1) {
             a = a + dateline * half;
@@ -233,6 +246,19 @@ void sim_step(sim_t *s) {
                     /* Only a head flit performs route computation / VC
                      * allocation; body and tail flits inherit it. */
                     if (!f->is_head) continue;
+
+                    /* Torus: the two dimensions reuse one pair of VCs, so
+                     * the dateline bit is cleared as the packet leaves the X
+                     * dimension. DOR guarantees it never returns, so no cycle
+                     * spans the reset. */
+                    if (t->type == TOPO_TORUS) {
+                        int cr, cc, dr, dc;
+                        mesh_node_coords(i, t->cols, &cr, &cc);
+                        mesh_node_coords(f->dst, t->cols, &dr, &dc);
+                        (void)cr; (void)dr;
+                        int cur_dim = (cc == dc) ? 1 : 0;
+                        if (cur_dim != f->dim) { f->dim = cur_dim; f->dateline = 0; }
+                    }
 
                     int op = s->nh_port[i][f->dst];
                     if (op == EJECT_PORT) {

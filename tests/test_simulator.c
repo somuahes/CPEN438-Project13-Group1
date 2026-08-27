@@ -366,6 +366,69 @@ static int test_large_node_count(void) {
     return 0;
 }
 
+/* ---- 14. Torus: deadlock freedom and the per-dimension dateline ------ */
+
+static int test_torus_deadlock_free(void) {
+    topology_t *t = topology_build_torus(4, 4);
+
+    /* Below saturation nothing may be lost and everything must retire.
+     * A missing dateline reset would strand packets that need a wraparound
+     * in both dimensions, showing up here as undelivered measurement
+     * packets rather than as a crash. */
+    double rates[] = { 0.05, 0.20, 0.40 };
+    for (int i = 0; i < 3; i++) {
+        sim_t *s = run_case(t, TRAFFIC_UNIFORM, VC_MODE_BASELINE, rates[i]);
+        CHECK(sim_check_conservation(s));
+        CHECK(s->st.dropped_full == 0);
+        CHECK(s->st.m_delivered == s->st.m_generated);
+        sim_free(s);
+    }
+
+    /* Even driven hard past saturation the network must keep retiring
+     * packets: a deadlocked torus would wedge at zero throughput. */
+    sim_t *o = run_case(t, TRAFFIC_UNIFORM, VC_MODE_BASELINE, 0.95);
+    CHECK(sim_check_conservation(o));
+    CHECK(sim_accepted_throughput(o) > 0.40);
+    sim_free(o);
+
+    topology_free(t);
+    return 0;
+}
+
+/* ---- 15. Torus beats the mesh once flow-control freedom is matched --- */
+
+static int test_torus_versus_mesh(void) {
+    topology_t *mesh  = topology_build_mesh(4, 4);
+    topology_t *torus = topology_build_torus(4, 4);
+
+    /* Hop count follows straight from the hand calculations: the torus
+     * wraparound cuts the average distance. */
+    sim_t *m = run_case(mesh,  TRAFFIC_UNIFORM, VC_MODE_BASELINE, 0.10);
+    sim_t *t = run_case(torus, TRAFFIC_UNIFORM, VC_MODE_BASELINE, 0.10);
+    CHECK(fabs(sim_avg_hops(m) - 2.67) < 0.40);
+    CHECK(fabs(sim_avg_hops(t) - 2.13) < 0.40);
+    CHECK(sim_avg_hops(t) < sim_avg_hops(m));
+    CHECK(sim_avg_latency(t) < sim_avg_latency(m));
+    sim_free(m); sim_free(t);
+
+    /* At equal TOTAL VC count the torus is handicapped: the dateline rule
+     * spends half its budget on deadlock freedom, leaving one usable VC
+     * per packet against the mesh's two. */
+    sim_t *mb = run_case(mesh,  TRAFFIC_UNIFORM, VC_MODE_BASELINE, 0.80);
+    sim_t *tb = run_case(torus, TRAFFIC_UNIFORM, VC_MODE_BASELINE, 0.80);
+    CHECK(sim_accepted_throughput(tb) < sim_accepted_throughput(mb));
+
+    /* Given the same number of USABLE VCs per packet, the structural
+     * advantage shows: smaller diameter and double the bisection. */
+    sim_t *tm = run_case(torus, TRAFFIC_UNIFORM, VC_MODE_MORE, 0.80);
+    CHECK(sim_accepted_throughput(tm) > sim_accepted_throughput(mb));
+    CHECK(sim_check_conservation(tm));
+
+    sim_free(mb); sim_free(tb); sim_free(tm);
+    topology_free(mesh); topology_free(torus);
+    return 0;
+}
+
 /* ---- Main ------------------------------------------------------------ */
 
 int main(void) {
@@ -383,9 +446,11 @@ int main(void) {
     failures += test_class_isolation_removes_hol_blocking();
     failures += test_class_isolation_neutral_under_uniform();
     failures += test_large_node_count();
+    failures += test_torus_deadlock_free();
+    failures += test_torus_versus_mesh();
 
     if (failures == 0) {
-        printf("ALL TESTS PASSED (%d checks across 13 test functions)\n", tests_run);
+        printf("ALL TESTS PASSED (%d checks across 15 test functions)\n", tests_run);
         return 0;
     }
     printf("%d test function(s) FAILED\n", failures);

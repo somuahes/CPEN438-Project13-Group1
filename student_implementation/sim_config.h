@@ -24,7 +24,7 @@ typedef struct {
     double   sat_efficiency;
     double   rates[SIM_CONFIG_MAX_RATES];
     int      nrates;
-    int      do_ring, do_mesh;
+    int      do_ring, do_mesh, do_torus;
     char     outdir[256];
 } sim_config_t;
 
@@ -50,5 +50,7 @@ int  sim_config_expect_ring_diameter(const sim_config_t *c);
 int  sim_config_expect_ring_bisection(const sim_config_t *c);
 int  sim_config_expect_mesh_diameter(const sim_config_t *c);
 int  sim_config_expect_mesh_bisection(const sim_config_t *c);
+int  sim_config_expect_torus_diameter(const sim_config_t *c);
+int  sim_config_expect_torus_bisection(const sim_config_t *c);
 
 #endif /* SIM_CONFIG_H */

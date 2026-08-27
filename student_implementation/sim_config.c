@@ -15,7 +15,7 @@ void sim_config_defaults(sim_config_t *c) {
     c->seed = 1301u; c->hot_nodes = 2; c->hot_fraction = 0.50;
     c->warmup = 3000L; c->measure = 12000L; c->drain_max = 30000L;
     c->sat_efficiency = 0.95;
-    c->do_ring = c->do_mesh = 1;
+    c->do_ring = c->do_mesh = c->do_torus = 1;
     snprintf(c->outdir, sizeof(c->outdir), "results");
 }
 
@@ -103,13 +103,13 @@ int sim_config_validate(const sim_config_t *c) {
      * not rejected for mesh dimensions it never uses. */
     int smallest = 0;
     if (c->do_ring) smallest = c->node_count;
-    if (c->do_mesh) {
+    if (c->do_mesh || c->do_torus) {
         int mesh_n = c->mesh_rows * c->mesh_cols;
         if (!smallest || mesh_n < smallest) smallest = mesh_n;
     }
 
     if (c->do_ring && c->node_count < 2)       e = "node_count must be >= 2";
-    else if (c->do_mesh && (c->mesh_rows < 1 || c->mesh_cols < 1))
+    else if ((c->do_mesh || c->do_torus) && (c->mesh_rows < 1 || c->mesh_cols < 1))
                                                e = "mesh_rows/mesh_cols must be >= 1";
     else if (c->hot_nodes < 1)                 e = "hot_node_count must be >= 1";
     else if (c->hot_nodes > MAX_HOT_NODES)     e = "hot_node_count exceeds MAX_HOT_NODES";
@@ -139,4 +139,18 @@ int sim_config_expect_mesh_diameter(const sim_config_t *c) {
 
 int sim_config_expect_mesh_bisection(const sim_config_t *c) {
     return (c->mesh_rows < c->mesh_cols) ? c->mesh_rows : c->mesh_cols;
+}
+
+/* Each wrapped dimension is a ring, so the worst case is floor(k/2) per
+ * dimension; an unwrapped dimension (extent < 3) contributes k-1. */
+int sim_config_expect_torus_diameter(const sim_config_t *c) {
+    int dr = (c->mesh_rows >= 3) ? c->mesh_rows / 2 : c->mesh_rows - 1;
+    int dc = (c->mesh_cols >= 3) ? c->mesh_cols / 2 : c->mesh_cols - 1;
+    return dr + dc;
+}
+
+int sim_config_expect_torus_bisection(const sim_config_t *c) {
+    int vertical   = c->mesh_rows * ((c->mesh_cols >= 3) ? 2 : 1);
+    int horizontal = c->mesh_cols * ((c->mesh_rows >= 3) ? 2 : 1);
+    return (vertical < horizontal) ? vertical : horizontal;
 }

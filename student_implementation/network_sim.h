@@ -47,9 +47,17 @@
  * -direction routing never exceeds floor(N/2) hops, a packet crosses the
  * dateline at most once, which breaks the cycle.
  *
- * Both topologies are therefore given the SAME baseline VC budget
+ * A torus has a cycle in EVERY dimension, so it needs the dateline rule in
+ * both. Dimension-order routing already forbids returning to the X
+ * dimension once the Y dimension has been entered, so the two dimensions
+ * cannot form a joint cycle and one pair of VCs can be reused for both:
+ * the dateline bit is RESET at the X->Y transition. A packet therefore
+ * crosses at most one dateline per dimension while holding the low VC,
+ * and 2 VCs suffice -- the same budget as the ring and the mesh.
+ *
+ * All three topologies are therefore given the SAME baseline VC budget
  * (VC_BASELINE = 2 VCs of VC_BUF_FLITS flits each) so that the
- * ring-vs-mesh comparison is not confounded by buffer resources.
+ * topology comparison is not confounded by buffer resources.
  *
  * -------------------------------------------------------------------------
  * PACKET ACCOUNTING (Project 13 Section M)
@@ -126,7 +134,8 @@ typedef struct {
     int  is_head;
     int  is_tail;
     int  hot;          /* destination belongs to the hot-node set          */
-    int  dateline;     /* ring dateline bit (0 before crossing, 1 after)   */
+    int  dateline;     /* dateline bit (0 before crossing, 1 after)        */
+    int  dim;          /* torus DOR phase: 0 = X (columns), 1 = Y (rows)   */
     int  hops;         /* hops travelled so far                            */
     long gen_cycle;    /* cycle at which the packet was generated          */
     int  measured;     /* generated inside the measurement window          */
