@@ -34,101 +34,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "network_sim.h"
-
-#define MAX_RATES     64
-#define DEFAULT_CONFIG "configs/group1_week3_config.txt"
-
-/* Every swept parameter lives here rather than in #defines, so that the
- * assigned configuration stays in configs/ and an unseen node count can be
- * run from the command line without a rebuild. */
-typedef struct {
-    int      node_count, mesh_rows, mesh_cols;
-    unsigned seed;
-    int      hot_nodes;
-    double   hot_fraction;
-    long     warmup, measure, drain_max;
-    double   sat_efficiency;
-    double   rates[MAX_RATES];
-    int      nrates;
-    int      do_ring, do_mesh;
-    char     outdir[256];
-} sweep_cfg_t;
-
-static void cfg_defaults(sweep_cfg_t *c) {
-    memset(c, 0, sizeof(*c));
-    c->node_count = 16; c->mesh_rows = 4; c->mesh_cols = 4;
-    c->seed = 1301u; c->hot_nodes = 2; c->hot_fraction = 0.50;
-    c->warmup = 3000L; c->measure = 12000L; c->drain_max = 30000L;
-    c->sat_efficiency = 0.95;
-    c->do_ring = c->do_mesh = 1;
-    snprintf(c->outdir, sizeof(c->outdir), "results");
-}
-
-static char *trim(char *s) {
-    while (*s == ' ' || *s == '\t') s++;
-    char *e = s + strlen(s);
-    while (e > s && (e[-1] == ' ' || e[-1] == '\t' || e[-1] == '\n' || e[-1] == '\r')) *--e = 0;
-    return s;
-}
-
-static int parse_rates(const char *v, double *out, int cap) {
-    int n = 0;
-    const char *p = v;
-    while (*p && n < cap) {
-        char *end;
-        double d = strtod(p, &end);
-        if (end == p) { p++; continue; }
-        if (d > 0.0) out[n++] = d;
-        p = end;
-    }
-    return n;
-}
-
-/* key = value, '#' comments, trailing '\' continues onto the next line. */
-static int cfg_load_file(sweep_cfg_t *c, const char *path, int required) {
-    FILE *f = fopen(path, "r");
-    if (!f) {
-        if (required) fprintf(stderr, "FATAL: cannot open config %s\n", path);
-        return required ? 0 : 1;
-    }
-    char line[1024], acc[4096];
-    while (fgets(line, sizeof(line), f)) {
-        acc[0] = 0;
-        for (;;) {
-            char *h = strchr(line, '#');
-            if (h) *h = 0;
-            char *t = trim(line);
-            size_t len = strlen(t);
-            int cont = (len > 0 && t[len - 1] == '\\');
-            if (cont) t[len - 1] = 0;
-            if (strlen(acc) + strlen(t) + 2 < sizeof(acc)) {
-                if (acc[0]) strcat(acc, " ");
-                strcat(acc, t);
-            }
-            if (!cont || !fgets(line, sizeof(line), f)) break;
-        }
-        char *eq = strchr(acc, '=');
-        if (!eq) continue;
-        *eq = 0;
-        char *k = trim(acc), *v = trim(eq + 1);
-        if (!*k || !*v) continue;
-
-        if      (!strcmp(k, "node_count"))           c->node_count = atoi(v);
-        else if (!strcmp(k, "ring_nodes"))           c->node_count = atoi(v);
-        else if (!strcmp(k, "mesh_rows"))            c->mesh_rows = atoi(v);
-        else if (!strcmp(k, "mesh_cols"))            c->mesh_cols = atoi(v);
-        else if (!strcmp(k, "traffic_seed"))         c->seed = (unsigned)strtoul(v, NULL, 10);
-        else if (!strcmp(k, "hot_node_count"))       c->hot_nodes = atoi(v);
-        else if (!strcmp(k, "hot_traffic_fraction")) c->hot_fraction = atof(v);
-        else if (!strcmp(k, "warmup_cycles"))        c->warmup = atol(v);
-        else if (!strcmp(k, "measurement_cycles"))   c->measure = atol(v);
-        else if (!strcmp(k, "drain_cap_cycles"))     c->drain_max = atol(v);
-        else if (!strcmp(k, "saturation_efficiency")) c->sat_efficiency = atof(v);
-        else if (!strcmp(k, "injection_rates"))      c->nrates = parse_rates(v, c->rates, MAX_RATES);
-    }
-    fclose(f);
-    return 1;
-}
+#include "sim_config.h"
 
 static void usage(const char *prog) {
     printf("Usage: %s [options]\n"
@@ -140,10 +46,10 @@ static void usage(const char *prog) {
            "  --topology LIST  comma-separated: ring,mesh (default both)\n"
            "  --rates LIST     injection rates, comma- or space-separated\n"
            "  --outdir DIR     results directory (default results)\n"
-           "  --help\n", prog, DEFAULT_CONFIG);
+           "  --help\n", prog, SIM_CONFIG_DEFAULT);
 }
 
-static int cfg_parse_args(sweep_cfg_t *c, int argc, char **argv) {
+static int cfg_parse_args(sim_config_t *c, int argc, char **argv) {
     for (int i = 1; i < argc; i++) {
         const char *a = argv[i];
         int has_val = (i + 1 < argc);
@@ -156,7 +62,7 @@ static int cfg_parse_args(sweep_cfg_t *c, int argc, char **argv) {
         else if (!strcmp(a, "--cols")   && has_val)  { c->mesh_cols = atoi(v); i++; }
         else if (!strcmp(a, "--seed")   && has_val)  { c->seed = (unsigned)strtoul(v, NULL, 10); i++; }
         else if (!strcmp(a, "--outdir") && has_val)  { snprintf(c->outdir, sizeof(c->outdir), "%s", v); i++; }
-        else if (!strcmp(a, "--rates")  && has_val)  { c->nrates = parse_rates(v, c->rates, MAX_RATES); i++; }
+        else if (!strcmp(a, "--rates")  && has_val)  { c->nrates = sim_config_parse_rates(v, c->rates, SIM_CONFIG_MAX_RATES); i++; }
         else if (!strcmp(a, "--topology") && has_val) {
             c->do_ring = (strstr(v, "ring") != NULL);
             c->do_mesh = (strstr(v, "mesh") != NULL);
@@ -178,14 +84,14 @@ typedef struct {
 } config_t;
 
 int main(int argc, char **argv) {
-    sweep_cfg_t cfg;
-    cfg_defaults(&cfg);
+    sim_config_t cfg;
+    sim_config_defaults(&cfg);
 
-    const char *cfg_path = DEFAULT_CONFIG;
+    const char *cfg_path = SIM_CONFIG_DEFAULT;
     int cfg_explicit = 0;
     for (int i = 1; i + 1 < argc; i++)
         if (!strcmp(argv[i], "--config")) { cfg_path = argv[i + 1]; cfg_explicit = 1; }
-    if (!cfg_load_file(&cfg, cfg_path, cfg_explicit)) return 1;
+    if (!sim_config_load(&cfg, cfg_path, cfg_explicit)) return 1;
 
     int pa = cfg_parse_args(&cfg, argc, argv);
     if (pa <= 0) return pa < 0 ? 1 : 0;
@@ -205,10 +111,10 @@ int main(int argc, char **argv) {
     /* Closed-form expectations for the configured size. The gate is kept
      * from Week 2 but is now derived rather than hard-coded to 16 nodes,
      * so it still fires for an unseen node count. */
-    int exp_ring_diam = cfg.node_count / 2;
-    int exp_ring_bis  = (cfg.node_count < 3) ? cfg.node_count - 1 : 2;
-    int exp_mesh_diam = (cfg.mesh_rows - 1) + (cfg.mesh_cols - 1);
-    int exp_mesh_bis  = (cfg.mesh_rows < cfg.mesh_cols) ? cfg.mesh_rows : cfg.mesh_cols;
+    int exp_ring_diam = sim_config_expect_ring_diameter(&cfg);
+    int exp_ring_bis  = sim_config_expect_ring_bisection(&cfg);
+    int exp_mesh_diam = sim_config_expect_mesh_diameter(&cfg);
+    int exp_mesh_bis  = sim_config_expect_mesh_bisection(&cfg);
 
     printf("=== Project 13 / Group 1 -- Injection-Rate Sweep ===\n\n");
     printf("Config file   : %s\n", cfg_path);

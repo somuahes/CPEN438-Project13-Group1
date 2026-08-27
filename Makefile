@@ -2,6 +2,7 @@
 CC      = gcc
 CFLAGS  = -O2 -Wall -Wextra -std=c11 -Istudent_implementation
 LDLIBS  = -lm
+CFG     = student_implementation/sim_config.c
 SRC     = student_implementation/network_topology.c \
           student_implementation/traffic.c \
           student_implementation/network_sim.c
@@ -11,13 +12,13 @@ all: test_topology verify_topology test_simulator run_sweep dump_traffic
 test_topology:   student_implementation/network_topology.c tests/test_topology.c
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
-verify_topology: student_implementation/network_topology.c tests/verify_topology.c
+verify_topology: student_implementation/network_topology.c $(CFG) tests/verify_topology.c
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 test_simulator:  $(SRC) tests/test_simulator.c
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
-run_sweep:       $(SRC) tests/run_sweep.c
+run_sweep:       $(SRC) $(CFG) tests/run_sweep.c
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 dump_traffic:    student_implementation/traffic.c tests/dump_traffic.c

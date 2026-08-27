@@ -8,3 +8,5 @@ dump_traffic
 __pycache__/
 test_topology
 verify_topology
+test_topology
+verify_topology
