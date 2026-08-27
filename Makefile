@@ -34,7 +34,19 @@ week3: all
 	./run_sweep | tee results/week3_sweep_console.txt
 	python3 python/analyze_network_results.py
 
+# Full Week 4 pipeline: everything in week3, plus the folded-torus sweep
+# and the area/wiring-cost model.
+week4: all
+	./test_topology
+	./verify_topology
+	./test_simulator
+	./dump_traffic 3000
+	python3 python/gen_datacenter_traffic.py --verify results/traffic_reference_c.csv
+	./run_sweep | tee results/week3_sweep_console.txt
+	python3 python/analyze_network_results.py
+	python3 python/area_model.py
+
 clean:
 	rm -f test_topology verify_topology test_simulator run_sweep dump_traffic *.exe
 
-.PHONY: all week3 clean
+.PHONY: all week3 week4 clean

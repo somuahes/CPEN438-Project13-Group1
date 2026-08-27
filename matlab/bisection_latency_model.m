@@ -58,20 +58,28 @@ HOT          = [5 1];   % hot database nodes, derived from seed 1301
 HOT_FRACTION = 0.50;    % share of all packets addressed to them
 ROUTER_DELAY = 1;       % cycles per hop
 
-configs = { 'ring', 'uniform'; ...
-            'mesh', 'uniform'; ...
-            'ring', 'hotnode'; ...
-            'mesh', 'hotnode' };
+configs = { 'ring',  'uniform'; ...
+            'mesh',  'uniform'; ...
+            'torus', 'uniform'; ...
+            'ring',  'hotnode'; ...
+            'mesh',  'hotnode'; ...
+            'torus', 'hotnode' };
 
 %% ---- Static topology metrics (must agree with Week 2) ----------------
 ringDiameter    = floor(N/2);                 % = 8
 ringBisection   = 2;                          % links
 meshDiameter    = (ROWS-1) + (COLS-1);        % = 6
 meshBisection   = min(ROWS, COLS);            % = 4 links
+% Folded torus (Week 4, Level-3 extension): every row and column is a ring,
+% so the worst case is floor(k/2) per dimension, and a cut perpendicular to
+% a wrapped dimension severs both the direct and the wraparound link.
+torusDiameter   = floor(ROWS/2) + floor(COLS/2);   % = 4
+torusBisection  = 2 * min(ROWS, COLS);             % = 8 links
 
 fprintf('\n=== Week 2 static metrics used by the model ===\n');
 fprintf('  ring(%d) : diameter %d, bisection %d links\n', N, ringDiameter, ringBisection);
-fprintf('  mesh(%dx%d): diameter %d, bisection %d links\n\n', ROWS, COLS, meshDiameter, meshBisection);
+fprintf('  mesh(%dx%d): diameter %d, bisection %d links\n', ROWS, COLS, meshDiameter, meshBisection);
+fprintf('  torus(%dx%d): diameter %d, bisection %d links\n\n', ROWS, COLS, torusDiameter, torusBisection);
 
 %% ---- Analytical model per configuration ------------------------------
 model = struct([]);
@@ -87,7 +95,11 @@ for k = 1:size(configs,1)
     lamStar    = min(lamChannel, lamEject);
 
     % Classical bisection bound, for comparison with the worked example.
-    if strcmp(topo,'ring'), B = ringBisection; else, B = meshBisection; end
+    switch topo
+        case 'ring',  B = ringBisection;
+        case 'mesh',  B = meshBisection;
+        case 'torus', B = torusBisection;
+    end
     crossFraction = (N/2) * ((N/2)/(N-1));  % flits/cycle crossing per lambda
     lamBisection  = B / crossFraction;
 
@@ -237,6 +249,8 @@ for s = 0:N-1
         if p <= 0, continue; end
         if strcmp(topo, 'ring')
             path = ringPath(s, d, N);
+        elseif strcmp(topo, 'torus')
+            path = torusPathDOR(s, d, rows, cols);
         else
             path = meshPathXY(s, d, cols);
         end
@@ -264,6 +278,35 @@ for i = 1:h
     c = mod(c + step, N);
     path(i+1) = c;
 end
+end
+
+% Torus dimension-order routing: the shorter way round each dimension, ties
+% to the increasing direction. Mirrors torus_route_dor() in the C module and
+% torus_path_dor() in analyze_network_results.py.
+function path = torusPathDOR(s, d, rows, cols)
+    r1 = floor(s / cols); c1 = mod(s, cols);
+    r2 = floor(d / cols); c2 = mod(d, cols);
+
+    [chops, cstep] = dimSteps(c1, c2, cols);
+    [rhops, rstep] = dimSteps(r1, r2, rows);
+
+    path = s; r = r1; c = c1;
+    for i = 1:chops
+        c = mod(c + cstep, cols);
+        path(end+1) = r * cols + c;   %#ok<AGROW>
+    end
+    for i = 1:rhops
+        r = mod(r + rstep, rows);
+        path(end+1) = r * cols + c;   %#ok<AGROW>
+    end
+end
+
+function [hops, step] = dimSteps(a, b, n)
+    if a == b
+        hops = 0; step = 0; return;
+    end
+    up = mod(b - a, n); down = mod(a - b, n);
+    if up <= down, hops = up; step = 1; else, hops = down; step = -1; end
 end
 
 function path = meshPathXY(s, d, cols)

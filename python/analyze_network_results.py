@@ -53,10 +53,26 @@ HOT = (5, 1)
 HOT_FRACTION = 0.50
 ROUTER_DELAY = 1
 
-STATIC = {                       # verified in Week 2
-    "ring": {"diameter": 8, "bisection": 2, "links": 16, "degree": 2},
-    "mesh": {"diameter": 6, "bisection": 4, "links": 24, "degree": 4},
+STATIC = {                       # ring/mesh verified in Week 2, torus in Week 4
+    "ring":  {"diameter": 8, "bisection": 2, "links": 16, "degree": 2},
+    "mesh":  {"diameter": 6, "bisection": 4, "links": 24, "degree": 4},
+    "torus": {"diameter": 4, "bisection": 8, "links": 32, "degree": 4},
 }
+
+TOPO_LABEL = {"ring": "ring(16)", "mesh": "mesh(4x4)", "torus": "torus(4x4)"}
+
+# Headline comparison: equal USABLE virtual channels per packet, which is what
+# isolates topology from flow-control resources. The mesh needs no dateline
+# (XY routing on a mesh is already acyclic) so its 2 VCs are both usable. The
+# ring and torus must reserve half their VCs for the dateline rule, so the
+# torus is given 4 to reach the same 2 usable channels. The equal-TOTAL-budget
+# view -- where deadlock freedom is charged to the topology -- is reported
+# separately as the cost accounting (fig 8).
+HEADLINE_MODE = {"ring": "baseline_vc2", "mesh": "baseline_vc2",
+                 "torus": "vc4_plain"}
+USABLE_VC_NOTE = {"ring": "2 VCs / 1 usable", "mesh": "2 VCs / 2 usable",
+                  "torus": "4 VCs / 2 usable"}
+TOPOS = ("ring", "mesh", "torus")
 
 MODE_LABEL = {
     "baseline_vc2": "Baseline (2 VCs, shared queue)",
@@ -77,6 +93,31 @@ def ring_path(s, d, n=N):
     for _ in range(hops):
         c = (c + step) % n
         path.append(c)
+    return path
+
+
+def torus_path_dor(s, d, rows=ROWS, cols=COLS):
+    """Dimension-order with the shorter way round each dimension; ties go to
+    the increasing direction. Mirrors torus_route_dor() in the C module."""
+    r1, c1 = divmod(s, cols)
+    r2, c2 = divmod(d, cols)
+
+    def steps(a, b, n):
+        if a == b:
+            return 0, 0
+        up, down = (b - a) % n, (a - b) % n
+        return (up, 1) if up <= down else (down, -1)
+
+    chops, cstep = steps(c1, c2, cols)
+    rhops, rstep = steps(r1, r2, rows)
+
+    path, r, c = [s], r1, c1
+    for _ in range(chops):
+        c = (c + cstep) % cols
+        path.append(r * cols + c)
+    for _ in range(rhops):
+        r = (r + rstep) % rows
+        path.append(r * cols + c)
     return path
 
 
@@ -118,7 +159,8 @@ def destination_distribution(pattern):
 def analytical_model(topology, pattern):
     """Channel-load saturation bound and zero-load latency."""
     P = destination_distribution(pattern)
-    pathf = ring_path if topology == "ring" else mesh_path_xy
+    pathf = {"ring": ring_path, "mesh": mesh_path_xy,
+             "torus": torus_path_dor}[topology]
     load, eject, hops = {}, [0.0] * N, 0.0
 
     for s in range(N):
@@ -202,12 +244,16 @@ def achieved_saturation(rows, topology, traffic, mode="baseline_vc2"):
 
 def fig_latency_by_traffic(rows, traffic, outpath, title):
     fig, ax = plt.subplots(figsize=(7.2, 4.6))
-    for topo, marker in (("ring", "o"), ("mesh", "s")):
-        x, y = series(rows, topo, traffic, "baseline_vc2", "avg_latency")
+    for topo, marker in (("ring", "o"), ("mesh", "s"), ("torus", "^")):
+        mode = HEADLINE_MODE[topo]
+        x, y = series(rows, topo, traffic, mode, "avg_latency")
+        if not x:
+            continue
         st = STATIC[topo]
         ax.plot(x, y, marker=marker, linewidth=1.6, markersize=5,
-                label=f"{topo} (diameter {st['diameter']}, bisection {st['bisection']})")
-        sat = achieved_saturation(rows, topo, traffic)
+                label=f"{topo} (diam {st['diameter']}, bisect {st['bisection']}"
+                      f"; {USABLE_VC_NOTE[topo]})")
+        sat = achieved_saturation(rows, topo, traffic, mode)
         ax.axvline(sat, linestyle=":", linewidth=1.1, color=ax.lines[-1].get_color())
         ax.annotate(f"saturation\n{sat:.2f}", xy=(sat, 20),
                     xytext=(sat + 0.01, 30), fontsize=8,
@@ -226,9 +272,13 @@ def fig_latency_by_traffic(rows, traffic, outpath, title):
 def fig_throughput(rows, outpath):
     fig, ax = plt.subplots(figsize=(7.2, 4.6))
     styles = {("ring", "uniform"): ("o", "-"), ("mesh", "uniform"): ("s", "-"),
-              ("ring", "hotnode"): ("o", "--"), ("mesh", "hotnode"): ("s", "--")}
+              ("torus", "uniform"): ("^", "-"),
+              ("ring", "hotnode"): ("o", "--"), ("mesh", "hotnode"): ("s", "--"),
+              ("torus", "hotnode"): ("^", "--")}
     for (topo, traf), (marker, ls) in styles.items():
-        x, y = series(rows, topo, traf, "baseline_vc2", "accepted_throughput")
+        x, y = series(rows, topo, traf, HEADLINE_MODE[topo], "accepted_throughput")
+        if not x:
+            continue
         ax.plot(x, y, marker=marker, linestyle=ls, linewidth=1.5,
                 markersize=4.5, label=f"{topo} / {traf}")
     lim = max(r["offered_rate"] for r in rows)
@@ -236,7 +286,7 @@ def fig_throughput(rows, outpath):
             label="ideal (accepted = offered)")
     ax.set_xlabel("offered injection rate (flits/node/cycle)")
     ax.set_ylabel("accepted throughput (flits/node/cycle)")
-    ax.set_title("Accepted throughput vs offered load (baseline flow control)")
+    ax.set_title("Accepted throughput vs offered load (equal usable VCs per packet)")
     ax.grid(True, alpha=0.3)
     ax.legend(fontsize=9)
     fig.tight_layout()
@@ -245,15 +295,15 @@ def fig_throughput(rows, outpath):
 
 
 def fig_model_validation(rows, models, outpath):
-    fig, axes = plt.subplots(2, 2, figsize=(9.6, 6.8), sharex=True)
-    combos = [("ring", "uniform"), ("mesh", "uniform"),
-              ("ring", "hotnode"), ("mesh", "hotnode")]
+    fig, axes = plt.subplots(2, 3, figsize=(13.2, 6.8), sharex=True)
+    combos = [("ring", "uniform"), ("mesh", "uniform"), ("torus", "uniform"),
+              ("ring", "hotnode"), ("mesh", "hotnode"), ("torus", "hotnode")]
     for ax, (topo, traf) in zip(axes.ravel(), combos):
         m = models[(topo, traf)]
         xs = [0.005 + i * (0.98 * m["lam_star"] - 0.005) / 199 for i in range(200)]
         ax.plot(xs, [model_latency(m, x) for x in xs], linewidth=1.8,
                 label="analytical model")
-        x, y = series(rows, topo, traf, "baseline_vc2", "avg_latency")
+        x, y = series(rows, topo, traf, HEADLINE_MODE[topo], "avg_latency")
         ax.plot(x, y, "ko", markersize=4, markerfacecolor="white",
                 label="measured")
         ax.axvline(m["lam_star"], linestyle="--", linewidth=1.0, color="0.5")
@@ -296,11 +346,15 @@ def fig_innovation(rows, outpath):
 def fig_packet_loss(rows, outpath):
     fig, ax = plt.subplots(figsize=(7.2, 4.4))
     for topo, traf, marker in (("ring", "uniform", "o"), ("mesh", "uniform", "s"),
-                               ("ring", "hotnode", "^"), ("mesh", "hotnode", "v")):
-        x, y = series(rows, topo, traf, "baseline_vc2", "dropped_full")
+                               ("torus", "uniform", "^"), ("ring", "hotnode", "P"),
+                               ("mesh", "hotnode", "D"), ("torus", "hotnode", "v")):
+        mode = HEADLINE_MODE[topo]
+        x, y = series(rows, topo, traf, mode, "dropped_full")
+        if not x:
+            continue
         ax.plot(x, y, marker=marker, linewidth=1.5, markersize=4.5,
                 label=f"{topo} / {traf}")
-        sat = achieved_saturation(rows, topo, traf)
+        sat = achieved_saturation(rows, topo, traf, mode)
         ax.axvline(sat, linestyle=":", linewidth=1.0,
                    color=ax.lines[-1].get_color())
     ax.set_xlabel("offered injection rate (flits/node/cycle)")
@@ -314,13 +368,13 @@ def fig_packet_loss(rows, outpath):
 
 
 def fig_saturation_bar(rows, models, outpath):
-    combos = [("ring", "uniform"), ("mesh", "uniform"),
-              ("ring", "hotnode"), ("mesh", "hotnode")]
+    combos = [("ring", "uniform"), ("mesh", "uniform"), ("torus", "uniform"),
+              ("ring", "hotnode"), ("mesh", "hotnode"), ("torus", "hotnode")]
     labels = [f"{t}\n{p}" for t, p in combos]
     ideal = [models[c]["lam_star"] for c in combos]
-    achieved = [achieved_saturation(rows, *c) for c in combos]
+    achieved = [achieved_saturation(rows, t, p, HEADLINE_MODE[t]) for t, p in combos]
     xs = range(len(combos))
-    fig, ax = plt.subplots(figsize=(7.2, 4.4))
+    fig, ax = plt.subplots(figsize=(9.0, 4.4))
     ax.bar([x - 0.19 for x in xs], ideal, width=0.38,
            label="ideal (channel-load model)")
     ax.bar([x + 0.19 for x in xs], achieved, width=0.38,
@@ -339,6 +393,39 @@ def fig_saturation_bar(rows, models, outpath):
     plt.close(fig)
 
 
+def fig_vc_cost(rows, outpath):
+    """The equal-total-VC view: deadlock freedom charged to the topology.
+
+    The mesh needs no dateline, so both its VCs carry traffic. The torus must
+    reserve half of its budget, so at an equal TOTAL budget of 2 VCs it has
+    only one usable channel per packet and loses to the mesh despite its
+    better diameter and bisection. Restoring the second usable channel costs
+    2 more VCs of buffering."""
+    fig, ax = plt.subplots(figsize=(7.6, 4.6))
+    tracks = [
+        ("mesh",  "baseline_vc2", "s", "-",  "mesh  2 VCs (2 usable, no dateline)"),
+        ("torus", "baseline_vc2", "^", "--", "torus 2 VCs (1 usable, dateline)"),
+        ("torus", "vc4_plain",    "^", "-",  "torus 4 VCs (2 usable, dateline)"),
+    ]
+    for topo, mode, marker, ls, label in tracks:
+        x, y = series(rows, topo, "uniform", mode, "accepted_throughput")
+        if not x:
+            continue
+        ax.plot(x, y, marker=marker, linestyle=ls, linewidth=1.6,
+                markersize=5, label=label)
+    lim = max(r["offered_rate"] for r in rows)
+    ax.plot([0, lim], [0, lim], color="0.45", linewidth=1.0,
+            label="ideal (accepted = offered)")
+    ax.set_xlabel("offered injection rate (flits/node/cycle)")
+    ax.set_ylabel("accepted throughput (flits/node/cycle)")
+    ax.set_title("What deadlock freedom costs the torus (uniform traffic)")
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=8.5, loc="upper left")
+    fig.tight_layout()
+    fig.savefig(outpath, dpi=150)
+    plt.close(fig)
+
+
 # --------------------------------------------------------------------------
 # Tables
 # --------------------------------------------------------------------------
@@ -349,11 +436,14 @@ def write_results_table(rows, models, path):
         w.writerow(["topology", "traffic", "diameter", "bisection_bandwidth_links",
                     "avg_hops_model", "zero_load_latency_measured",
                     "saturation_rate_measured", "peak_accepted_throughput",
-                    "latency_at_0.20"])
-        for topo in ("ring", "mesh"):
+                    "latency_at_0.20", "vc_budget"])
+        for topo in TOPOS:
             for traf in ("uniform", "hotnode"):
+                mode = HEADLINE_MODE[topo]
                 sel = [r for r in rows if r["topology"] == topo
-                       and r["traffic"] == traf and r["vc_mode"] == "baseline_vc2"]
+                       and r["traffic"] == traf and r["vc_mode"] == mode]
+                if not sel:
+                    continue
                 sel.sort(key=lambda r: r["offered_rate"])
                 lat020 = next((r["avg_latency"] for r in sel
                                if abs(r["offered_rate"] - 0.20) < 1e-9), "")
@@ -361,9 +451,10 @@ def write_results_table(rows, models, path):
                     topo, traf, STATIC[topo]["diameter"], STATIC[topo]["bisection"],
                     f"{models[(topo, traf)]['avg_hops']:.3f}",
                     f"{sel[0]['avg_latency']:.2f}",
-                    f"{achieved_saturation(rows, topo, traf):.2f}",
+                    f"{achieved_saturation(rows, topo, traf, mode):.2f}",
                     f"{max(r['accepted_throughput'] for r in sel):.4f}",
                     f"{lat020:.2f}" if lat020 != "" else "",
+                    USABLE_VC_NOTE[topo],
                 ])
 
 
@@ -375,11 +466,12 @@ def write_model_table(rows, models, path):
                     "lam_star_model", "zero_load_latency_model",
                     "zero_load_latency_measured", "lam_achieved_measured",
                     "efficiency"])
-        for topo in ("ring", "mesh"):
+        for topo in TOPOS:
             for traf in ("uniform", "hotnode"):
                 m = models[(topo, traf)]
                 sel = [r for r in rows if r["topology"] == topo
-                       and r["traffic"] == traf and r["vc_mode"] == "baseline_vc2"]
+                       and r["traffic"] == traf
+                       and r["vc_mode"] == HEADLINE_MODE[topo]]
                 sel.sort(key=lambda r: r["offered_rate"])
                 ach = achieved_saturation(rows, topo, traf)
                 w.writerow([topo, traf, f"{m['avg_hops']:.3f}",
@@ -433,17 +525,17 @@ def main():
 
     rows = load_sweep(os.path.join(rdir, "week3_sweep_results.csv"))
     models = {(t, p): analytical_model(t, p)
-              for t in ("ring", "mesh") for p in ("uniform", "hotnode")}
+              for t in TOPOS for p in ("uniform", "hotnode")}
 
     print("=== Analytical channel-load model (Group 1 configuration) ===")
-    print(f"{'topo':5s} {'traffic':8s} {'avgHops':>8s} {'peakLoad':>9s} "
+    print(f"{'topo':6s} {'traffic':8s} {'avgHops':>8s} {'peakLoad':>9s} "
           f"{'lam_chan':>9s} {'lam_eject':>10s} {'lam_bisec':>10s} "
           f"{'lam*':>7s} {'measured':>9s} {'eff':>6s}")
-    for topo in ("ring", "mesh"):
+    for topo in TOPOS:
         for traf in ("uniform", "hotnode"):
             m = models[(topo, traf)]
-            ach = achieved_saturation(rows, topo, traf)
-            print(f"{topo:5s} {traf:8s} {m['avg_hops']:8.3f} "
+            ach = achieved_saturation(rows, topo, traf, HEADLINE_MODE[topo])
+            print(f"{topo:6s} {traf:8s} {m['avg_hops']:8.3f} "
                   f"{m['peak_channel_load']:9.3f} {m['lam_channel']:9.3f} "
                   f"{m['lam_eject']:10.3f} {m['lam_bisection']:10.3f} "
                   f"{m['lam_star']:7.3f} {ach:9.2f} {ach / m['lam_star']:6.2f}")
@@ -459,6 +551,7 @@ def main():
     fig_innovation(rows, os.path.join(fdir, "fig5_innovation.png"))
     fig_packet_loss(rows, os.path.join(fdir, "fig6_packet_loss.png"))
     fig_saturation_bar(rows, models, os.path.join(fdir, "fig7_saturation.png"))
+    fig_vc_cost(rows, os.path.join(fdir, "fig8_vc_cost.png"))
 
     write_results_table(rows, models, os.path.join(rdir, "week3_results_table.csv"))
     write_model_table(rows, models, os.path.join(rdir, "week3_model_vs_measured.csv"))
