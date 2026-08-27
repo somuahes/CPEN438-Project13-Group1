@@ -12,31 +12,35 @@
 /* ------------------------------------------------------------------- */
 
 static topology_t *alloc_topology(topology_type_t type, int num_nodes,
-                                   int rows, int cols) {
+                                   int rows, int cols, int max_degree) {
     topology_t *t = (topology_t *)malloc(sizeof(topology_t));
     t->type = type;
     t->num_nodes = num_nodes;
     t->rows = rows;
     t->cols = cols;
+    t->adj_cap = max_degree;
     t->adj_count = (int *)calloc((size_t)num_nodes, sizeof(int));
     t->adj = (int **)malloc((size_t)num_nodes * sizeof(int *));
-    for (int i = 0; i < num_nodes; i++) {
-        /* Max degree is 4 (mesh interior node) or 2 (ring node); 4 is a
-         * safe fixed upper bound for both topologies built by this
-         * module. */
-        t->adj[i] = (int *)malloc(4 * sizeof(int));
-    }
+    for (int i = 0; i < num_nodes; i++)
+        t->adj[i] = (int *)malloc((size_t)max_degree * sizeof(int));
     return t;
 }
 
+/* Overflowing adj[] would corrupt the heap silently, so this is fatal
+ * rather than clamped: it means a builder declared the wrong degree. */
 static void add_edge(topology_t *t, int a, int b) {
+    if (t->adj_count[a] >= t->adj_cap || t->adj_count[b] >= t->adj_cap) {
+        fprintf(stderr, "FATAL: node degree exceeds %d adding edge %d-%d\n",
+                t->adj_cap, a, b);
+        exit(2);
+    }
     t->adj[a][t->adj_count[a]++] = b;
     t->adj[b][t->adj_count[b]++] = a;
 }
 
 topology_t *topology_build_ring(int num_nodes) {
     if (num_nodes < 2) return NULL;
-    topology_t *t = alloc_topology(TOPO_RING, num_nodes, 1, num_nodes);
+    topology_t *t = alloc_topology(TOPO_RING, num_nodes, 1, num_nodes, 2);
 
     if (num_nodes == 2) {
         /* Degenerate case: a 2-node "ring" is a single pair. We record
@@ -57,7 +61,7 @@ topology_t *topology_build_ring(int num_nodes) {
 topology_t *topology_build_mesh(int rows, int cols) {
     if (rows < 1 || cols < 1) return NULL;
     int num_nodes = rows * cols;
-    topology_t *t = alloc_topology(TOPO_MESH, num_nodes, rows, cols);
+    topology_t *t = alloc_topology(TOPO_MESH, num_nodes, rows, cols, 4);
 
     for (int r = 0; r < rows; r++) {
         for (int c = 0; c < cols; c++) {

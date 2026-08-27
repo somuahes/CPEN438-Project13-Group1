@@ -6,3 +6,5 @@ test_simulator
 run_sweep
 dump_traffic
 __pycache__/
+test_topology
+verify_topology

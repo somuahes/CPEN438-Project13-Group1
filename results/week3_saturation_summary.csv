@@ -1,0 +1,13 @@
+topology,traffic,vc_mode,vcs,diameter,bisection,zero_load_latency,saturation_rate,first_saturated_rate,peak_accepted_throughput
+ring,uniform,baseline_vc2,2,8,2,8.5723,0.2800,0.3200,0.272417
+mesh,uniform,baseline_vc2,2,6,4,6.8783,0.7000,0.8000,0.723865
+ring,hotnode,baseline_vc2,2,8,2,8.5558,0.2000,0.2400,0.241615
+mesh,hotnode,baseline_vc2,2,6,4,6.7299,0.2000,0.2400,0.384906
+ring,hotnode,vc4_plain,4,8,2,8.5746,0.2400,0.2800,0.311771
+mesh,hotnode,vc4_plain,4,6,4,6.7320,0.2000,0.2400,0.397396
+ring,hotnode,vc2_qclass,2,8,2,8.5558,0.2000,0.2400,0.248281
+mesh,hotnode,vc2_qclass,2,6,4,6.7299,0.2400,0.2800,0.395115
+ring,hotnode,vc4_class,4,8,2,8.5600,0.2000,0.2400,0.301672
+mesh,hotnode,vc4_class,4,6,4,6.7299,0.2400,0.2800,0.568042
+ring,uniform,vc4_class,4,8,2,8.5723,0.2800,0.3200,0.272417
+mesh,uniform,vc4_class,4,6,4,6.8783,0.7000,0.8000,0.724094

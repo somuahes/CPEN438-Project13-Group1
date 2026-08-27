@@ -31,6 +31,7 @@ typedef struct {
     int num_nodes;
     int rows;   /* mesh only; 1 for ring */
     int cols;   /* mesh: number of columns; ring: num_nodes */
+    int adj_cap;      /* allocated neighbour slots per node */
     int *adj_count;   /* [num_nodes] */
     int **adj;        /* [num_nodes][adj_count[i]] neighbour ids */
 } topology_t;

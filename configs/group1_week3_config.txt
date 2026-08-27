@@ -52,6 +52,7 @@ drain_cap_cycles        = 30000
 injection_rates         = 0.02 0.05 0.08 0.11 0.14 0.17 0.20 0.24 0.28 \
                           0.32 0.36 0.40 0.45 0.50 0.55 0.60 0.70 0.80
 saturation_criterion    = accepted < 0.95 x offered, or any dropped packet
+saturation_efficiency   = 0.95          # numeric form of the criterion above
 
 # ---- Build ----------------------------------------------------------
 compiler                = gcc
