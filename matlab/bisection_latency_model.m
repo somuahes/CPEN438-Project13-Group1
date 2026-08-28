@@ -135,9 +135,11 @@ end
 
 %% ---- Figure 1: latency vs injection rate, model vs measurement -------
 figure(1); clf;
-colours = lines(4);
-for k = 1:numel(model)
-    subplot(2,2,k); hold on; grid on;
+nPanels = numel(model);
+nCols   = ceil(nPanels / 2);
+colours = lines(nPanels);
+for k = 1:nPanels
+    subplot(2, nCols, k); hold on; grid on;
 
     lam = linspace(0.01, 0.98*model(k).lamStar, 300);
     rho = lam / model(k).lamStar;

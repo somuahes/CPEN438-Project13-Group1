@@ -469,11 +469,13 @@ def write_model_table(rows, models, path):
         for topo in TOPOS:
             for traf in ("uniform", "hotnode"):
                 m = models[(topo, traf)]
+                mode = HEADLINE_MODE[topo]
                 sel = [r for r in rows if r["topology"] == topo
-                       and r["traffic"] == traf
-                       and r["vc_mode"] == HEADLINE_MODE[topo]]
+                       and r["traffic"] == traf and r["vc_mode"] == mode]
+                if not sel:
+                    continue
                 sel.sort(key=lambda r: r["offered_rate"])
-                ach = achieved_saturation(rows, topo, traf)
+                ach = achieved_saturation(rows, topo, traf, mode)
                 w.writerow([topo, traf, f"{m['avg_hops']:.3f}",
                             f"{m['peak_channel_load']:.3f}",
                             f"{m['lam_channel']:.3f}", f"{m['lam_eject']:.3f}",
@@ -490,15 +492,19 @@ def write_innovation_table(rows, path, knee=0.24):
                     "offered_rate", "background_latency", "hot_latency",
                     "accepted_throughput", "peak_accepted_throughput",
                     "background_speedup_vs_baseline"])
-        for topo in ("ring", "mesh"):
-            base = next(r for r in rows if r["topology"] == topo
-                        and r["traffic"] == "hotnode"
-                        and r["vc_mode"] == "baseline_vc2"
-                        and abs(r["offered_rate"] - knee) < 1e-9)
-            for mode in ("baseline_vc2", "vc4_plain", "vc2_qclass", "vc4_class"):
-                r = next(x for x in rows if x["topology"] == topo
+        def at_knee(topo, mode):
+            return next((x for x in rows if x["topology"] == topo
                          and x["traffic"] == "hotnode" and x["vc_mode"] == mode
-                         and abs(x["offered_rate"] - knee) < 1e-9)
+                         and abs(x["offered_rate"] - knee) < 1e-9), None)
+
+        for topo in TOPOS:
+            base = at_knee(topo, "baseline_vc2")
+            if base is None or not base["bg_latency"]:
+                continue
+            for mode in ("baseline_vc2", "vc4_plain", "vc2_qclass", "vc4_class"):
+                r = at_knee(topo, mode)
+                if r is None or not r["bg_latency"]:
+                    continue
                 peak = max(x["accepted_throughput"] for x in rows
                            if x["topology"] == topo and x["traffic"] == "hotnode"
                            and x["vc_mode"] == mode)

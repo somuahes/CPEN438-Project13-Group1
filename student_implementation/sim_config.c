@@ -16,6 +16,13 @@ void sim_config_defaults(sim_config_t *c) {
     c->warmup = 3000L; c->measure = 12000L; c->drain_max = 30000L;
     c->sat_efficiency = 0.95;
     c->do_ring = c->do_mesh = c->do_torus = 1;
+
+    static const double dflt[] = {
+        0.02, 0.05, 0.08, 0.11, 0.14, 0.17, 0.20, 0.24, 0.28,
+        0.32, 0.36, 0.40, 0.45, 0.50, 0.55, 0.60, 0.70, 0.80
+    };
+    c->nrates = (int)(sizeof(dflt) / sizeof(dflt[0]));
+    for (int i = 0; i < c->nrates; i++) c->rates[i] = dflt[i];
     snprintf(c->outdir, sizeof(c->outdir), "results");
 }
 
@@ -33,7 +40,7 @@ int sim_config_parse_rates(const char *v, double *out, int cap) {
         char *end;
         double d = strtod(p, &end);
         if (end == p) { p++; continue; }
-        if (d > 0.0) out[n++] = d;
+        out[n++] = d;
         p = end;
     }
     return n;
@@ -122,6 +129,15 @@ int sim_config_validate(const sim_config_t *c) {
     else if (c->nrates < 1)                    e = "no injection rates configured";
 
     if (e) { fprintf(stderr, "FATAL: %s\n", e); return 0; }
+
+    /* Offered load is in flits/node/cycle against a unit-bandwidth
+     * injection port, so anything above 1.0 is not physically meaningful. */
+    for (int i = 0; i < c->nrates; i++) {
+        if (c->rates[i] <= 0.0 || c->rates[i] > 1.0) {
+            fprintf(stderr, "FATAL: injection rate %g outside (0, 1]\n", c->rates[i]);
+            return 0;
+        }
+    }
     return 1;
 }
 
