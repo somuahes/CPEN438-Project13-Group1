@@ -19,7 +19,8 @@ void sim_config_defaults(sim_config_t *c) {
 
     static const double dflt[] = {
         0.02, 0.05, 0.08, 0.11, 0.14, 0.17, 0.20, 0.24, 0.28,
-        0.32, 0.36, 0.40, 0.45, 0.50, 0.55, 0.60, 0.70, 0.80
+        0.32, 0.36, 0.40, 0.45, 0.50, 0.55, 0.60, 0.70, 0.80,
+        0.85, 0.90, 0.94, 0.97, 1.00
     };
     c->nrates = (int)(sizeof(dflt) / sizeof(dflt[0]));
     for (int i = 0; i < c->nrates; i++) c->rates[i] = dflt[i];
@@ -133,7 +134,9 @@ int sim_config_validate(const sim_config_t *c) {
     /* Offered load is in flits/node/cycle against a unit-bandwidth
      * injection port, so anything above 1.0 is not physically meaningful. */
     for (int i = 0; i < c->nrates; i++) {
-        if (c->rates[i] <= 0.0 || c->rates[i] > 1.0) {
+        /* Written as the negation of the accepted range so that NaN, for
+         * which every comparison is false, is rejected rather than run. */
+        if (!(c->rates[i] > 0.0 && c->rates[i] <= 1.0)) {
             fprintf(stderr, "FATAL: injection rate %g outside (0, 1]\n", c->rates[i]);
             return 0;
         }

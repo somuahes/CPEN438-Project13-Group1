@@ -36,7 +36,12 @@ Warmup/measure: 3000 / 12000 cycles (drain cap 30000)
    0.60     0.2693      10053.0    10053.0     0.0         4.29     3891     SATURATED
    0.70     0.2710      11155.2    11155.2     0.0         4.25     9275     SATURATED
    0.80     0.2682      12194.5    12194.5     0.0         4.28     15542    SATURATED
-   => zero-load latency 8.57 cycles; highest loss-free rate 0.28; first saturated rate 0.32; peak accepted 0.2724 flits/node/cycle
+   0.85     0.2705      12467.1    12467.1     0.0         4.29     18402    SATURATED
+   0.90     0.2714      12723.4    12723.4     0.0         4.26     21432    SATURATED
+   0.94     0.2664      13127.4    13127.4     0.0         4.29     23994    SATURATED
+   0.97     0.2689      13251.6    13251.6     0.0         4.29     25798    SATURATED
+   1.00     0.2731      13250.9    13250.9     0.0         4.27     27332    SATURATED
+   => zero-load latency 8.57 cycles; highest loss-free rate 0.28; first saturated rate 0.32; peak accepted 0.2731 flits/node/cycle
 
 -- mesh / uniform / baseline_vc2 --
    offered  accepted    avg_lat    bg_lat      hot_lat     avg_hop  dropped  state
@@ -58,7 +63,12 @@ Warmup/measure: 3000 / 12000 cycles (drain cap 30000)
    0.60     0.5992      15.9       15.9        0.0         2.67     0        stable
    0.70     0.6932      133.8      133.8       0.0         2.67     0        stable
    0.80     0.7239      991.2      991.2       0.0         2.66     29       SATURATED
-   => zero-load latency 6.88 cycles; highest loss-free rate 0.70; first saturated rate 0.80; peak accepted 0.7239 flits/node/cycle
+   0.85     0.7285      1558.0     1558.0      0.0         2.68     556      SATURATED
+   0.90     0.7318      2107.1     2107.1      0.0         2.67     1211     SATURATED
+   0.94     0.7360      2422.0     2422.0      0.0         2.69     2230     SATURATED
+   0.97     0.7295      2658.7     2658.7      0.0         2.69     3562     SATURATED
+   1.00     0.7334      2904.3     2904.3      0.0         2.71     4656     SATURATED
+   => zero-load latency 6.88 cycles; highest loss-free rate 0.70; first saturated rate 0.80; peak accepted 0.7360 flits/node/cycle
 
 -- ring / hotnode / baseline_vc2 --
    offered  accepted    avg_lat    bg_lat      hot_lat     avg_hop  dropped  state
@@ -80,6 +90,11 @@ Warmup/measure: 3000 / 12000 cycles (drain cap 30000)
    0.60     0.2416      10751.8    9970.3      11479.5     4.28     7154     SATURATED
    0.70     0.2389      11981.4    11156.8     12773.0     4.30     12073    SATURATED
    0.80     0.2390      12750.4    11910.2     13578.6     4.30     17426    SATURATED
+   0.85     0.2383      13052.9    12211.8     13873.9     4.31     20454    SATURATED
+   0.90     0.2375      13357.8    12496.0     14187.6     4.31     23371    SATURATED
+   0.94     0.2369      13417.0    12624.0     14171.0     4.32     25794    SATURATED
+   0.97     0.2386      13608.7    12855.3     14334.8     4.30     27523    SATURATED
+   1.00     0.2395      13573.4    12760.2     14369.8     4.26     29272    SATURATED
    => zero-load latency 8.56 cycles; highest loss-free rate 0.20; first saturated rate 0.24; peak accepted 0.2416 flits/node/cycle
 
 -- mesh / hotnode / baseline_vc2 --
@@ -102,7 +117,12 @@ Warmup/measure: 3000 / 12000 cycles (drain cap 30000)
    0.60     0.3728      3434.8     3202.2      3648.0      2.43     6733     SATURATED
    0.70     0.3772      4305.6     4051.4      4540.7      2.43     9488     SATURATED
    0.80     0.3849      4553.5     4377.4      4717.6      2.43     14194    SATURATED
-   => zero-load latency 6.73 cycles; highest loss-free rate 0.20; first saturated rate 0.24; peak accepted 0.3849 flits/node/cycle
+   0.85     0.3789      4700.8     4717.8      4685.1      2.44     16886    SATURATED
+   0.90     0.3835      4690.1     4781.9      4605.9      2.43     19381    SATURATED
+   0.94     0.3900      4551.3     4635.3      4473.9      2.43     21275    SATURATED
+   0.97     0.3814      4819.1     4972.4      4681.6      2.44     22866    SATURATED
+   1.00     0.3861      4660.5     4756.7      4574.0      2.44     24308    SATURATED
+   => zero-load latency 6.73 cycles; highest loss-free rate 0.20; first saturated rate 0.24; peak accepted 0.3900 flits/node/cycle
 
 -- ring / hotnode / vc4_plain --
    offered  accepted    avg_lat    bg_lat      hot_lat     avg_hop  dropped  state
@@ -124,6 +144,11 @@ Warmup/measure: 3000 / 12000 cycles (drain cap 30000)
    0.60     0.3023      6642.6     5987.5      7245.5      4.23     6450     SATURATED
    0.70     0.3042      7701.7     6942.0      8424.1      4.28     10853    SATURATED
    0.80     0.3118      8400.9     7567.4      9218.0      4.29     15318    SATURATED
+   0.85     0.3080      8754.6     7882.3      9617.0      4.30     17888    SATURATED
+   0.90     0.3085      9215.7     8314.4      10102.1     4.30     19953    SATURATED
+   0.94     0.3067      9231.8     8332.1      10124.0     4.31     22226    SATURATED
+   0.97     0.3104      9447.9     8581.5      10305.3     4.30     23765    SATURATED
+   1.00     0.3107      9327.8     8423.0      10233.3     4.28     25399    SATURATED
    => zero-load latency 8.57 cycles; highest loss-free rate 0.24; first saturated rate 0.28; peak accepted 0.3118 flits/node/cycle
 
 -- mesh / hotnode / vc4_plain --
@@ -146,6 +171,11 @@ Warmup/measure: 3000 / 12000 cycles (drain cap 30000)
    0.60     0.3773      3461.2     3283.8      3622.8      2.42     6230     SATURATED
    0.70     0.3891      3700.4     3564.9      3823.1      2.44     10084    SATURATED
    0.80     0.3974      4250.0     4111.0      4375.9      2.44     13564    SATURATED
+   0.85     0.3903      4341.1     4374.4      4310.7      2.44     16549    SATURATED
+   0.90     0.3907      4338.7     4459.4      4230.9      2.43     19168    SATURATED
+   0.94     0.3961      4267.5     4387.6      4160.3      2.43     21139    SATURATED
+   0.97     0.3897      4335.7     4535.6      4160.5      2.43     23082    SATURATED
+   1.00     0.3902      4103.2     4242.9      3979.0      2.44     24659    SATURATED
    => zero-load latency 6.73 cycles; highest loss-free rate 0.20; first saturated rate 0.24; peak accepted 0.3974 flits/node/cycle
 
 -- ring / hotnode / vc2_qclass --
@@ -168,6 +198,11 @@ Warmup/measure: 3000 / 12000 cycles (drain cap 30000)
    0.60     0.2452      10211.4    9015.1      11670.7     4.29     7318     SATURATED
    0.70     0.2440      11398.6    10535.5     12500.5     4.27     12413    SATURATED
    0.80     0.2437      12291.5    11670.6     13069.6     4.31     17921    SATURATED
+   0.85     0.2448      12643.0    11971.1     13500.0     4.27     20723    SATURATED
+   0.90     0.2441      13043.2    12580.0     13623.7     4.29     23510    SATURATED
+   0.94     0.2440      12977.5    12502.0     13576.7     4.27     25875    SATURATED
+   0.97     0.2447      13271.4    12997.1     13611.1     4.29     27575    SATURATED
+   1.00     0.2447      13220.2    13042.5     13443.7     4.25     29175    SATURATED
    => zero-load latency 8.56 cycles; highest loss-free rate 0.20; first saturated rate 0.24; peak accepted 0.2483 flits/node/cycle
 
 -- mesh / hotnode / vc2_qclass --
@@ -190,7 +225,12 @@ Warmup/measure: 3000 / 12000 cycles (drain cap 30000)
    0.60     0.3743      3126.3     3287.5      2965.3      2.43     6681     SATURATED
    0.70     0.3951      3706.1     3432.9      3980.0      2.44     9682     SATURATED
    0.80     0.3946      4011.0     4160.8      3851.4      2.43     13944    SATURATED
-   => zero-load latency 6.73 cycles; highest loss-free rate 0.24; first saturated rate 0.28; peak accepted 0.3951 flits/node/cycle
+   0.85     0.3880      4174.3     4514.9      3826.9      2.43     16744    SATURATED
+   0.90     0.3891      4276.2     4861.2      3707.9      2.41     19526    SATURATED
+   0.94     0.3974      4144.0     4720.4      3586.1      2.41     21316    SATURATED
+   0.97     0.3944      4365.0     4890.7      3867.2      2.41     22661    SATURATED
+   1.00     0.3956      4315.2     4809.6      3842.4      2.42     24028    SATURATED
+   => zero-load latency 6.73 cycles; highest loss-free rate 0.24; first saturated rate 0.28; peak accepted 0.3974 flits/node/cycle
 
 -- ring / hotnode / vc4_class --
    offered  accepted    avg_lat    bg_lat      hot_lat     avg_hop  dropped  state
@@ -212,7 +252,12 @@ Warmup/measure: 3000 / 12000 cycles (drain cap 30000)
    0.60     0.2978      5748.5     4331.3      7741.0      4.26     6946     SATURATED
    0.70     0.3002      7140.2     6056.4      8877.9      4.28     10241    SATURATED
    0.80     0.2973      8100.7     7444.6      9176.3      4.33     15247    SATURATED
-   => zero-load latency 8.56 cycles; highest loss-free rate 0.20; first saturated rate 0.24; peak accepted 0.3017 flits/node/cycle
+   0.85     0.3017      8217.4     7751.9      8999.8      4.32     17992    SATURATED
+   0.90     0.3007      8733.2     8207.3      9604.8      4.32     20487    SATURATED
+   0.94     0.3008      8762.3     8484.8      9224.8      4.33     22930    SATURATED
+   0.97     0.3026      8733.2     8604.4      8951.6      4.35     24552    SATURATED
+   1.00     0.3016      8877.9     8875.2      8882.4      4.33     26229    SATURATED
+   => zero-load latency 8.56 cycles; highest loss-free rate 0.20; first saturated rate 0.24; peak accepted 0.3026 flits/node/cycle
 
 -- mesh / hotnode / vc4_class --
    offered  accepted    avg_lat    bg_lat      hot_lat     avg_hop  dropped  state
@@ -234,7 +279,12 @@ Warmup/measure: 3000 / 12000 cycles (drain cap 30000)
    0.60     0.4720      1226.6     10.4        2740.0      2.44     4372     SATURATED
    0.70     0.5200      1603.0     11.6        3737.9      2.44     5972     SATURATED
    0.80     0.5680      1480.4     13.2        3792.2      2.46     8872     SATURATED
-   => zero-load latency 6.73 cycles; highest loss-free rate 0.24; first saturated rate 0.28; peak accepted 0.5680 flits/node/cycle
+   0.85     0.5875      1328.2     14.3        3571.6      2.46     10501    SATURATED
+   0.90     0.6093      1190.5     15.4        3322.3      2.45     11873    SATURATED
+   0.94     0.6282      1159.7     16.1        3290.5      2.45     12854    SATURATED
+   0.97     0.6367      1260.9     20.4        3615.9      2.46     13471    SATURATED
+   1.00     0.6499      1188.1     24.0        3492.4      2.46     14313    SATURATED
+   => zero-load latency 6.73 cycles; highest loss-free rate 0.24; first saturated rate 0.28; peak accepted 0.6499 flits/node/cycle
 
 -- ring / uniform / vc4_class --
    offered  accepted    avg_lat    bg_lat      hot_lat     avg_hop  dropped  state
@@ -256,7 +306,12 @@ Warmup/measure: 3000 / 12000 cycles (drain cap 30000)
    0.60     0.2689      6677.0     6677.0      0.0         4.28     11746    SATURATED
    0.70     0.2702      7105.5     7105.5      0.0         4.23     17502    SATURATED
    0.80     0.2683      7361.9     7361.9      0.0         4.25     23728    SATURATED
-   => zero-load latency 8.57 cycles; highest loss-free rate 0.28; first saturated rate 0.32; peak accepted 0.2724 flits/node/cycle
+   0.85     0.2690      7460.9     7460.9      0.0         4.29     26668    SATURATED
+   0.90     0.2694      7519.7     7519.7      0.0         4.27     29720    SATURATED
+   0.94     0.2692      7534.5     7534.5      0.0         4.30     32045    SATURATED
+   0.97     0.2681      7538.8     7538.8      0.0         4.29     34031    SATURATED
+   1.00     0.2725      7492.6     7492.6      0.0         4.27     35552    SATURATED
+   => zero-load latency 8.57 cycles; highest loss-free rate 0.28; first saturated rate 0.32; peak accepted 0.2725 flits/node/cycle
 
 -- mesh / uniform / vc4_class --
    offered  accepted    avg_lat    bg_lat      hot_lat     avg_hop  dropped  state
@@ -278,7 +333,12 @@ Warmup/measure: 3000 / 12000 cycles (drain cap 30000)
    0.60     0.5992      15.9       15.9        0.0         2.67     0        stable
    0.70     0.6932      133.8      133.8       0.0         2.67     0        stable
    0.80     0.7241      859.2      859.2       0.0         2.67     1051     SATURATED
-   => zero-load latency 6.88 cycles; highest loss-free rate 0.70; first saturated rate 0.80; peak accepted 0.7241 flits/node/cycle
+   0.85     0.7253      1207.5     1207.5      0.0         2.70     3070     SATURATED
+   0.90     0.7320      1553.4     1553.4      0.0         2.70     4684     SATURATED
+   0.94     0.7305      1714.0     1714.0      0.0         2.72     6512     SATURATED
+   0.97     0.7311      1826.2     1826.2      0.0         2.72     7848     SATURATED
+   1.00     0.7298      2026.4     2026.4      0.0         2.73     9255     SATURATED
+   => zero-load latency 6.88 cycles; highest loss-free rate 0.70; first saturated rate 0.80; peak accepted 0.7320 flits/node/cycle
 
 -- torus / uniform / baseline_vc2 --
    offered  accepted    avg_lat    bg_lat      hot_lat     avg_hop  dropped  state
@@ -300,7 +360,12 @@ Warmup/measure: 3000 / 12000 cycles (drain cap 30000)
    0.60     0.5748      555.5      555.5       0.0         2.14     0        stable
    0.70     0.5843      1903.7     1903.7      0.0         2.13     0        SATURATED
    0.80     0.5840      3366.3     3366.3      0.0         2.13     79       SATURATED
-   => zero-load latency 6.28 cycles; highest loss-free rate 0.60; first saturated rate 0.70; peak accepted 0.5843 flits/node/cycle
+   0.85     0.5859      4048.4     4048.4      0.0         2.13     1225     SATURATED
+   0.90     0.5877      4597.5     4597.5      0.0         2.13     2858     SATURATED
+   0.94     0.5864      4895.0     4895.0      0.0         2.13     4948     SATURATED
+   0.97     0.5845      5148.4     5148.4      0.0         2.13     6885     SATURATED
+   1.00     0.5871      5284.4     5284.4      0.0         2.14     8535     SATURATED
+   => zero-load latency 6.28 cycles; highest loss-free rate 0.60; first saturated rate 0.70; peak accepted 0.5877 flits/node/cycle
 
 -- torus / hotnode / baseline_vc2 --
    offered  accepted    avg_lat    bg_lat      hot_lat     avg_hop  dropped  state
@@ -322,7 +387,12 @@ Warmup/measure: 3000 / 12000 cycles (drain cap 30000)
    0.60     0.3996      3702.7     3712.7      3693.9      2.10     4114     SATURATED
    0.70     0.3976      4998.8     5091.3      4916.5      2.12     6544     SATURATED
    0.80     0.3996      5981.5     6080.4      5894.1      2.12     9598     SATURATED
-   => zero-load latency 6.25 cycles; highest loss-free rate 0.24; first saturated rate 0.28; peak accepted 0.3996 flits/node/cycle
+   0.85     0.3975      6577.9     6709.9      6462.0      2.12     11543    SATURATED
+   0.90     0.4005      6993.8     7155.6      6853.7      2.11     13740    SATURATED
+   0.94     0.3968      7176.9     7262.5      7103.4      2.11     16257    SATURATED
+   0.97     0.3972      7383.5     7560.6      7230.8      2.11     18025    SATURATED
+   1.00     0.3950      7439.8     7537.9      7355.9      2.11     19809    SATURATED
+   => zero-load latency 6.25 cycles; highest loss-free rate 0.24; first saturated rate 0.28; peak accepted 0.4005 flits/node/cycle
 
 -- torus / uniform / vc4_plain --
    offered  accepted    avg_lat    bg_lat      hot_lat     avg_hop  dropped  state
@@ -344,7 +414,12 @@ Warmup/measure: 3000 / 12000 cycles (drain cap 30000)
    0.60     0.5992      10.4       10.4        0.0         2.14     0        stable
    0.70     0.6979      12.9       12.9        0.0         2.13     0        stable
    0.80     0.8000      21.5       21.5        0.0         2.13     0        stable
-   => zero-load latency 6.27 cycles; highest loss-free rate 0.80; first saturated rate -1.00; peak accepted 0.8000 flits/node/cycle
+   0.85     0.8487      46.6       46.6        0.0         2.14     0        stable
+   0.90     0.8845      241.3      241.3       0.0         2.13     0        stable
+   0.94     0.9007      515.3      515.3       0.0         2.13     0        stable
+   0.97     0.9055      760.0      760.0       0.0         2.13     0        SATURATED
+   1.00     0.9055      1016.7     1016.7      0.0         2.14     0        SATURATED
+   => zero-load latency 6.27 cycles; highest loss-free rate 0.94; first saturated rate 0.97; peak accepted 0.9055 flits/node/cycle
 
 -- torus / hotnode / vc4_plain --
    offered  accepted    avg_lat    bg_lat      hot_lat     avg_hop  dropped  state
@@ -366,7 +441,12 @@ Warmup/measure: 3000 / 12000 cycles (drain cap 30000)
    0.60     0.4816      1344.6     1205.7      1468.9      2.09     3544     SATURATED
    0.70     0.5036      2229.6     2223.7      2234.9      2.11     5475     SATURATED
    0.80     0.5207      2838.7     2848.4      2830.0      2.11     8243     SATURATED
-   => zero-load latency 6.26 cycles; highest loss-free rate 0.28; first saturated rate 0.32; peak accepted 0.5207 flits/node/cycle
+   0.85     0.5165      3414.0     3448.9      3383.2      2.12     9441     SATURATED
+   0.90     0.5229      3738.1     3803.3      3680.6      2.12     10555    SATURATED
+   0.94     0.5205      4054.9     4070.6      4041.2      2.11     11905    SATURATED
+   0.97     0.5149      4454.1     4570.9      4352.6      2.12     12697    SATURATED
+   1.00     0.5167      4606.4     4666.9      4554.2      2.11     13951    SATURATED
+   => zero-load latency 6.26 cycles; highest loss-free rate 0.28; first saturated rate 0.32; peak accepted 0.5229 flits/node/cycle
 
 -- torus / hotnode / vc4_class --
    offered  accepted    avg_lat    bg_lat      hot_lat     avg_hop  dropped  state
@@ -388,7 +468,12 @@ Warmup/measure: 3000 / 12000 cycles (drain cap 30000)
    0.60     0.5042      1142.3     11.2        2376.1      2.09     2843     SATURATED
    0.70     0.5487      1644.2     16.3        3546.6      2.10     4229     SATURATED
    0.80     0.5887      2037.6     93.3        4478.2      2.10     5941     SATURATED
-   => zero-load latency 6.24 cycles; highest loss-free rate 0.24; first saturated rate 0.28; peak accepted 0.5887 flits/node/cycle
+   0.85     0.6054      2331.1     251.4       5030.6      2.11     6960     SATURATED
+   0.90     0.6227      2531.7     302.5       5511.8      2.10     8155     SATURATED
+   0.94     0.6319      2635.1     393.0       5736.6      2.09     9502     SATURATED
+   0.97     0.6417      2705.1     429.8       6034.5      2.09     10781    SATURATED
+   1.00     0.6463      2751.3     513.6       6150.5      2.09     11804    SATURATED
+   => zero-load latency 6.24 cycles; highest loss-free rate 0.24; first saturated rate 0.28; peak accepted 0.6463 flits/node/cycle
 
-Packet-conservation check: PASSED (0 violation(s) across 306 runs)
+Packet-conservation check: PASSED (0 violation(s) across 391 runs)
 Results written to results/raw/week3_sweep_results.csv and results/raw/week3_saturation_summary.csv

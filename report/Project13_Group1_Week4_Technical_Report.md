@@ -17,21 +17,22 @@ traffic patterns: a 16-node ring, a 4×4 mesh, and — as the Level-3 Advanced
 extension — a 4×4 folded torus. Hand-computed diameter and bisection bandwidth are
 verified against the simulator's own topology construction before any traffic
 experiment is trusted, and every packet is accounted for by an explicit ledger that
-reconciles exactly across 306 sweep runs with zero violations.
+reconciles exactly across 391 sweep runs with zero violations.
 
 Three results stand out. First, under uniform-random traffic the measured saturation
 points track the structural metrics closely: the ring saturates at 0.28 flits/node/cycle,
-the mesh at 0.70, and the torus at 0.80, in the same order as their bisection
+the mesh at 0.70, and the torus at 0.94, in the same order as their bisection
 bandwidths of 2, 4 and 8 links. Second, under hot-node-skewed traffic that ordering
 collapses — the ring and mesh both saturate at 0.20 — because the binding constraint
 moves from the bisection cut to the single unit-bandwidth channel feeding each hot
 node, a constraint every topology shares. The classical bisection bound overestimates
 the achievable rate by up to 6.4× in this regime, while an explicit channel-load
-model predicts it to within 5–36%. Third, the torus's structural advantage is not
+model predicts it to within 5–33%. Third, the torus's structural advantage is not
 free: because a torus needs a dateline rule for deadlock freedom while a mesh does
 not, an equal *total* virtual-channel budget leaves the torus with half the usable
 buffering and it *loses* to the mesh (0.60 against 0.70). Given equal *usable*
-channels it wins as predicted, at a cost of 2.00× wire length and 1.87× network area.
+channels it wins decisively — 0.94 against 0.70, a 34% improvement — at a cost of
+2.00× wire length and 1.87× network area.
 
 Our innovation component, end-to-end traffic-class isolation, cuts background-traffic
 latency under hot-node load by 71.4× on the mesh and 59.6× on the ring, against
@@ -110,7 +111,7 @@ wire length is reproduced quantitatively in §VI-D.
 This work establishes that power and area budgets, not core count, bind future
 scaling. It frames our critical evaluation: as the area budget tightens, a topology
 that buys throughput with wire length and buffering becomes progressively harder to
-justify. Our finding that the torus costs 1.87× the mesh's network area for a 14%
+justify. Our finding that the torus costs 1.87× the mesh's network area for a 34%
 saturation improvement (§VI-D) is exactly the kind of trade-off that shifts under an
 area-constrained budget, and we return to it in §X.
 
@@ -276,16 +277,16 @@ closed form for the configured size and exits non-zero on any mismatch, and
 
 | Topology | Diam | Bisect | Zero-load latency | Saturation | Peak throughput |
 |---|---:|---:|---:|---:|---:|
-| ring(16) | 8 | 2 | 8.57 | 0.28 | 0.272 |
-| mesh(4×4) | 6 | 4 | 6.88 | 0.70 | 0.724 |
-| torus(4×4) | 4 | 8 | 6.27 | **0.80** | **0.800** |
+| ring(16) | 8 | 2 | 8.57 | 0.28 | 0.273 |
+| mesh(4×4) | 6 | 4 | 6.88 | 0.70 | 0.736 |
+| torus(4×4) | 4 | 8 | 6.27 | **0.94** | **0.906** |
 
 *(Latency in cycles; rates in flits/node/cycle. VC budgets as in §VI-C.)*
 
 Under uniform traffic the measured ordering matches the structural prediction
 exactly. Zero-load latency tracks diameter and average hop count: the ring's 8.57
 cycles against the torus's 6.27. Saturation tracks bisection bandwidth: 0.28, 0.70
-and 0.80 for bisections of 2, 4 and 8 links.
+and 0.94 for bisections of 2, 4 and 8 links.
 
 The ring-versus-mesh result is the one the project brief predicts, and it holds: the
 mesh sustains 2.5× the ring's offered load before saturating, because cutting a ring
@@ -294,11 +295,11 @@ shows the saturation knees clearly separated.
 
 > **Figure 1** — `results/figures/fig1_latency_uniform.png`
 > Latency versus injection rate, uniform-random traffic, all three topologies.
-> Saturation knees at 0.28, 0.70 and 0.80.
+> Saturation knees at 0.28, 0.70 and 0.94.
 
 Figure 3 shows the same result as accepted throughput against offered load. Each
 topology tracks the ideal line until its own knee, then flattens: the ring departs
-first at 0.28, the mesh at 0.70, the torus last at 0.80. The vertical gap between a
+first at 0.28, the mesh at 0.70, the torus last at 0.94. The vertical gap between a
 curve and the ideal line after the knee is offered load the network cannot absorb.
 
 > **Figure 3** — `results/figures/fig3_throughput.png`
@@ -311,15 +312,15 @@ curve and the ideal line after the knee is offered load the network cannot absor
 | Topology | Saturation | Peak throughput | Latency at λ=0.20 |
 |---|---:|---:|---:|
 | ring(16) | 0.20 | 0.242 | 174.73 |
-| mesh(4×4) | 0.20 | 0.385 | 23.09 |
-| torus(4×4) | 0.28 | 0.521 | 8.46 |
+| mesh(4×4) | 0.20 | 0.390 | 23.09 |
+| torus(4×4) | 0.28 | 0.523 | 8.46 |
 
 The project brief predicts that the mesh-versus-ring gap should **widen** under
 hot-node traffic, on the reasoning that skewed traffic concentrates load precisely
 where bisection-limited topologies are weakest. **Our measurements contradict this.**
 The gap does not widen; on the saturation-rate metric it closes entirely — ring and
-mesh both saturate at 0.20 — and on peak throughput it narrows from 2.66× under
-uniform traffic to 1.59×.
+mesh both saturate at 0.20 — and on peak throughput it narrows from 2.69× under
+uniform traffic to 1.61×.
 
 This is not an implementation defect, and the channel-load model explains it
 precisely. Under 50% hot traffic the binding constraint stops being the bisection cut
@@ -334,7 +335,7 @@ under hot-node traffic the classical bisection bound gives λ = 0.938, while the
 actual peak channel load gives 0.221 — the measured value is 0.20. The bisection
 bound overestimates by 4.2×. For the torus the overestimate reaches 6.4×.
 
-The mesh advantage does not vanish entirely: it survives in peak throughput (0.385
+The mesh advantage does not vanish entirely: it survives in peak throughput (0.390
 against the ring's 0.242) and dramatically in latency at a fixed load (23.09 cycles
 against 174.73). But the headline saturation metric shows no advantage at all, and a
 report claiming otherwise would be false.
@@ -353,7 +354,7 @@ report claiming otherwise would be false.
 | ring | hotnode | 4.267 | 4.200 | 0.238 | 0.469 | 0.238 | 0.20 | 0.84 |
 | mesh | uniform | 2.667 | 1.067 | 0.938 | 0.938 | 0.938 | 0.70 | 0.75 |
 | mesh | hotnode | 2.533 | 4.533 | 0.221 | 0.938 | 0.221 | 0.20 | 0.91 |
-| torus | uniform | 2.133 | 0.800 | 1.250 | 1.875 | 1.250 | 0.80 | 0.64 |
+| torus | uniform | 2.133 | 0.800 | 1.250 | 1.875 | 1.250 | 0.94 | 0.75 |
 | torus | hotnode | 2.133 | 3.400 | 0.294 | 1.875 | 0.294 | 0.28 | 0.95 |
 
 Two observations follow.
@@ -365,11 +366,11 @@ and the textbook bound is right. In every other row they diverge, by up to 6.4×
 the torus under hot-node traffic. Reporting saturation against a bisection bound
 alone would have produced a badly wrong prediction in four of six cases.
 
-Second, **measured saturation reaches 64–95% of the channel-load bound.** The
+Second, **measured saturation reaches 67–95% of the channel-load bound.** The
 shortfall is the flow-control efficiency the model does not attempt to capture:
 finite buffering, head-of-line blocking, and round-robin arbitration. The efficiency
 is systematically higher under hot-node traffic (0.84–0.95) than under uniform
-(0.64–0.75), because when a single channel is the bottleneck the network approaches
+(0.67–0.75), because when a single channel is the bottleneck the network approaches
 that limit cleanly, whereas distributed contention leaves more capacity stranded.
 
 > **Figure 4** — `results/figures/fig4_model_validation.png`
@@ -409,9 +410,9 @@ not, for an instructive reason.**
 
 | Configuration | Total VCs | Usable VCs/packet | Saturation | Peak throughput |
 |---|---:|---:|---:|---:|
-| mesh, baseline | 2 | 2 | 0.70 | 0.724 |
-| torus, equal *total* budget | 2 | 1 | **0.60** | **0.584** |
-| torus, equal *usable* channels | 4 | 2 | **0.80** | **0.800** |
+| mesh, baseline | 2 | 2 | 0.70 | 0.736 |
+| torus, equal *total* budget | 2 | 1 | **0.60** | **0.588** |
+| torus, equal *usable* channels | 4 | 2 | **0.94** | **0.906** |
 
 At an equal total VC budget the torus **loses** to the mesh, despite having two-thirds
 the diameter and twice the bisection bandwidth. The reason is §III-D: the mesh needs
@@ -421,10 +422,10 @@ per packet. Wormhole flow control with one VC per port suffers severe head-of-li
 blocking at the router, and that dominates the structural advantage.
 
 Restoring the second usable channel — 4 VCs, two per dateline class — recovers the
-predicted behaviour in full: 0.80 saturation against the mesh's 0.70, and 0.800 peak
-throughput against 0.724. Figure 8 shows all three curves tracking the ideal line
-together until 0.55, after which the 2-VC torus peels off first, then the mesh, while
-the 4-VC torus tracks the ideal to 0.80.
+predicted behaviour and then exceeds it: 0.94 saturation against the mesh's 0.70, and
+0.906 peak throughput against 0.736. Figure 8 shows all three curves tracking the
+ideal line together until 0.55, after which the 2-VC torus peels off first, then the
+mesh, while the 4-VC torus tracks the ideal almost to 0.94.
 
 This is the more interesting finding, and it is the one the project brief's framing
 would have missed. **The wraparound buys diameter and bisection bandwidth, but it is
@@ -441,7 +442,8 @@ Under hot-node traffic the torus saturates at 0.28 against the mesh's 0.20 — a
 but modest advantage, and far smaller than the uniform-traffic gap. This matches our
 recorded prediction: extra bisection bandwidth is not what is scarce when the
 bottleneck is the last-hop channel into a hot node. The torus does retain a large
-latency advantage at fixed load (8.46 cycles against the mesh's 23.09), because its
+latency advantage at fixed load (8.46 cycles against the mesh's 23.09), and its peak
+throughput is still 34% above the mesh's (0.523 against 0.390), because its
 shorter average path means packets not destined for a hot node clear the network
 faster.
 
@@ -473,7 +475,7 @@ it would be 2 against 15. This is precisely the electrical-predictability argume
 Dally and Towles make for structured networks over ad-hoc global wiring, and it is
 why a folded torus is practical where a plain torus is not.
 
-**The trade-off, stated plainly:** the torus delivers +14% saturation and +11% peak
+**The trade-off, stated plainly:** the torus delivers +34% saturation and +23% peak
 throughput over the mesh under uniform traffic, for 2.00× the wire length, 2.00× the
 buffering, and 1.87× the network area. Whether that is a good trade depends entirely
 on the area budget — which is the question Esmaeilzadeh et al. put at the centre of
@@ -556,10 +558,10 @@ is a full source queue, and that event is counted in `dropped_full`. Nothing is
 discarded elsewhere; a packet that cannot advance stalls and is still counted in
 `in_network`.
 
-**Results across the full sweep — 306 runs spanning 3 topologies, 2 traffic patterns,
-4 flow-control configurations and 18 injection rates:**
+**Results across the full sweep — 391 runs spanning 3 topologies, 2 traffic patterns,
+4 flow-control configurations and 23 injection rates:**
 
-- **306 of 306 runs satisfy the conservation identity exactly.** Zero violations.
+- **391 of 391 runs satisfy the conservation identity exactly.** Zero violations.
 - **Zero runs were classified stable while dropping packets.** Every drop occurs
   strictly at or above the reported saturation point.
 - Measurement-window packets still in flight when the drain cap expires are reported
@@ -598,7 +600,7 @@ of area and power budgets, the absence of a power model is a real gap. Wire leng
 a proxy for dynamic power at best.
 
 **Efficiency is unexplained, not merely unmodelled.** Our channel-load model predicts
-saturation to within 5–36%, but the residual is attributed to "flow-control
+saturation to within 5–33%, but the residual is attributed to "flow-control
 efficiency" without being decomposed into its parts. A more careful analysis would
 separate head-of-line blocking from buffer-depth limits from arbitration loss.
 
@@ -617,7 +619,7 @@ Topology structure predicts network performance well — but only when the traff
 stresses the structure the metric describes.
 
 Under uniform-random traffic, measured saturation followed bisection bandwidth
-faithfully: 0.28, 0.70 and 0.80 flits/node/cycle for bisections of 2, 4 and 8 links,
+faithfully: 0.28, 0.70 and 0.94 flits/node/cycle for bisections of 2, 4 and 8 links,
 and zero-load latency followed diameter just as closely. This is the textbook result
 and it holds cleanly.
 
@@ -626,7 +628,7 @@ Under hot-node-skewed traffic it does not. The ring and mesh saturate at the sam
 migrates to the single channel feeding each hot node — a resource every topology has
 exactly one of. The classical bisection bound overestimates achievable throughput by
 up to 6.4× in this regime. An explicit channel-load calculation, which costs nothing
-beyond walking the routing function over all node pairs, predicts it to within 5–36%.
+beyond walking the routing function over all node pairs, predicts it to within 5–33%.
 **The lesson is that bisection bandwidth is a statement about a cut, and it binds
 only when the traffic actually crosses that cut.**
 
@@ -634,7 +636,7 @@ The folded torus sharpened this further. Its structural advantage is real and
 measurable, but it is not free in the way diameter and bisection alone suggest: a
 torus needs virtual channels for deadlock freedom that a mesh does not, and at a
 fixed VC budget that cost exceeds the structural benefit. Charged fairly — equal
-usable channels — the torus delivers 14% higher saturation for 1.87× the network
+usable channels — the torus delivers 34% higher saturation for 1.87× the network
 area. Under the area-constrained scaling regime Esmaeilzadeh et al. describe, that
 is a trade an architect might well decline, and the ability to state it numerically
 is the point of the exercise.
@@ -681,7 +683,7 @@ make week4
 
 This rebuilds all five binaries, runs both test suites (2065 + 121 assertions),
 verifies the hand-computed topology metrics, cross-checks the C and Python traffic
-generators for bit-exact equality, runs the full 306-run sweep, and regenerates every
+generators for bit-exact equality, runs the full 391-run sweep, and regenerates every
 figure and table. The pipeline is idempotent: a second run produces byte-identical
 output.
 
@@ -709,4 +711,4 @@ To run a configuration the team has not seen — as at the live defence:
 from the seed · 50% hot-traffic share · 4 flits/packet · 4-flit VC buffers · 1
 flit/cycle/direction links · 1 cycle/hop router delay · ejection bandwidth 4
 flits/cycle · source queue 1024 packets · warm-up 3000 cycles · measurement 12 000
-cycles · drain cap 30 000 cycles · 18 injection rates from 0.02 to 0.80.
+cycles · drain cap 30 000 cycles · 23 injection rates from 0.02 to 1.00.

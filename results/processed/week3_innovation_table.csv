@@ -2,11 +2,11 @@ topology,vc_mode,description,vcs,queues,offered_rate,background_latency,hot_late
 ring,baseline_vc2,"Baseline (2 VCs, shared queue)",2,1,0.24,984.7,1152.1,0.2161,0.2416,1.0x
 ring,vc4_plain,"Control A: 4 VCs, shared queue",4,1,0.24,200.3,244.2,0.2347,0.3118,4.9x
 ring,vc2_qclass,"Control B: 2 VCs, class queues",2,2,0.24,495.7,1335.2,0.2194,0.2483,2.0x
-ring,vc4_class,Innovation: 4 VCs + class queues,4,2,0.24,16.5,856.3,0.2270,0.3017,59.6x
-mesh,baseline_vc2,"Baseline (2 VCs, shared queue)",2,1,0.24,574.0,670.5,0.2220,0.3849,1.0x
+ring,vc4_class,Innovation: 4 VCs + class queues,4,2,0.24,16.5,856.3,0.2270,0.3026,59.6x
+mesh,baseline_vc2,"Baseline (2 VCs, shared queue)",2,1,0.24,574.0,670.5,0.2220,0.3900,1.0x
 mesh,vc4_plain,"Control A: 4 VCs, shared queue",4,1,0.24,387.3,461.0,0.2270,0.3974,1.5x
-mesh,vc2_qclass,"Control B: 2 VCs, class queues",2,2,0.24,157.4,646.5,0.2298,0.3951,3.6x
-mesh,vc4_class,Innovation: 4 VCs + class queues,4,2,0.24,8.0,626.3,0.2292,0.5680,71.4x
-torus,baseline_vc2,"Baseline (2 VCs, shared queue)",2,1,0.24,405.0,481.6,0.2285,0.3996,1.0x
-torus,vc4_plain,"Control A: 4 VCs, shared queue",4,1,0.24,8.7,13.1,0.2388,0.5207,46.6x
-torus,vc4_class,Innovation: 4 VCs + class queues,4,2,0.24,7.3,473.1,0.2324,0.5887,55.8x
+mesh,vc2_qclass,"Control B: 2 VCs, class queues",2,2,0.24,157.4,646.5,0.2298,0.3974,3.6x
+mesh,vc4_class,Innovation: 4 VCs + class queues,4,2,0.24,8.0,626.3,0.2292,0.6499,71.4x
+torus,baseline_vc2,"Baseline (2 VCs, shared queue)",2,1,0.24,405.0,481.6,0.2285,0.4005,1.0x
+torus,vc4_plain,"Control A: 4 VCs, shared queue",4,1,0.24,8.7,13.1,0.2388,0.5229,46.6x
+torus,vc4_class,Innovation: 4 VCs + class queues,4,2,0.24,7.3,473.1,0.2324,0.6463,55.8x

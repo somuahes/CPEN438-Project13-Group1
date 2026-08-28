@@ -33,8 +33,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <errno.h>
 #include "network_sim.h"
 #include "sim_config.h"
+
+/* mkdir -p for a single path, creating intermediate components. */
+static int ensure_dir(const char *path) {
+    char buf[320];
+    snprintf(buf, sizeof(buf), "%s", path);
+    for (char *p = buf + 1; *p; p++) {
+        if (*p != '/') continue;
+        *p = 0;
+        if (mkdir(buf, 0775) != 0 && errno != EEXIST) return 0;
+        *p = '/';
+    }
+    return (mkdir(buf, 0775) == 0 || errno == EEXIST);
+}
 
 static void usage(const char *prog) {
     printf("Usage: %s [options]\n"
@@ -200,6 +215,13 @@ int main(int argc, char **argv) {
         { "torus", TOPO_TORUS, TRAFFIC_HOTNODE, VC_MODE_CLASS    }
     };
     int ncfg = (int)(sizeof(cfgs) / sizeof(cfgs[0]));
+
+    /* Create the output directory if it is missing, so the documented
+     * --outdir invocation works without the caller preparing it first. */
+    if (!ensure_dir(cfg.outdir)) {
+        fprintf(stderr, "FATAL: cannot create %s\n", cfg.outdir);
+        return 1;
+    }
 
     char csv_path[320], sum_path[320];
     snprintf(csv_path, sizeof(csv_path), "%s/week3_sweep_results.csv", cfg.outdir);

@@ -45,19 +45,69 @@ import matplotlib.pyplot as plt
 # --------------------------------------------------------------------------
 # Group 1 configuration
 # --------------------------------------------------------------------------
-N = 16
-ROWS, COLS = 4, 4
 PACKET_FLITS = 4
 EJECT_BW = 4
-HOT = (5, 1)
-HOT_FRACTION = 0.50
 ROUTER_DELAY = 1
 
-STATIC = {                       # ring/mesh verified in Week 2, torus in Week 4
-    "ring":  {"diameter": 8, "bisection": 2, "links": 16, "degree": 2},
-    "mesh":  {"diameter": 6, "bisection": 4, "links": 24, "degree": 4},
-    "torus": {"diameter": 4, "bisection": 8, "links": 32, "degree": 4},
-}
+
+def read_config(path):
+    """Read the same parameter file the C drivers read, so the model can
+    never describe a different configuration from the one simulated."""
+    cfg, key = {}, None
+    text = ""
+    for raw in open(path):
+        raw = raw.split("#", 1)[0].rstrip()
+        text += raw[:-1] + " " if raw.endswith("\\") else raw + "\n"
+    for line in text.split("\n"):
+        if "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        cfg[k.strip()] = v.strip()
+    return cfg
+
+
+def derive_hot(seed, num_nodes, num_hot):
+    """Mirrors traffic_init() in student_implementation/traffic.c, including
+    the forward walk that resolves collisions."""
+    hot, s = [], seed
+    for _ in range(num_hot):
+        cand = s % num_nodes
+        while cand in hot:
+            cand = (cand + 1) % num_nodes
+        hot.append(cand)
+        s //= num_nodes
+    return tuple(hot)
+
+
+_here = os.path.dirname(os.path.abspath(__file__))
+_cfg = read_config(os.path.join(_here, "..", "configs", "group1_week3_config.txt"))
+
+N = int(_cfg.get("ring_nodes", _cfg.get("node_count", 16)))
+ROWS = int(_cfg.get("mesh_rows", 4))
+COLS = int(_cfg.get("mesh_cols", 4))
+SEED = int(_cfg.get("traffic_seed", 1301))
+HOT_FRACTION = float(_cfg.get("hot_traffic_fraction", 0.50))
+HOT = derive_hot(SEED, N, int(_cfg.get("hot_node_count", 2)))
+
+def _static_metrics():
+    """Closed forms for the configured size, matching network_topology.c."""
+    wrap_r, wrap_c = ROWS >= 3, COLS >= 3
+    return {
+        "ring":  {"diameter": N // 2, "bisection": 2,
+                  "links": N, "degree": 2},
+        "mesh":  {"diameter": (ROWS - 1) + (COLS - 1), "bisection": min(ROWS, COLS),
+                  "links": ROWS * (COLS - 1) + COLS * (ROWS - 1), "degree": 4},
+        "torus": {"diameter": (ROWS // 2 if wrap_r else ROWS - 1)
+                              + (COLS // 2 if wrap_c else COLS - 1),
+                  "bisection": min(ROWS * (2 if wrap_c else 1),
+                                   COLS * (2 if wrap_r else 1)),
+                  "links": ROWS * (COLS if wrap_c else COLS - 1)
+                           + COLS * (ROWS if wrap_r else ROWS - 1),
+                  "degree": 4},
+    }
+
+
+STATIC = _static_metrics()
 
 TOPO_LABEL = {"ring": "ring(16)", "mesh": "mesh(4x4)", "torus": "torus(4x4)"}
 
@@ -225,17 +275,29 @@ def series(rows, topology, traffic, mode, field):
 
 def achieved_saturation(rows, topology, traffic, mode="baseline_vc2"):
     """Highest offered rate that was still stable and loss-free."""
+    return saturation_with_censoring(rows, topology, traffic, mode)[0]
+
+
+def saturation_with_censoring(rows, topology, traffic, mode="baseline_vc2"):
+    """Returns (rate, censored). `censored` is True when no swept point ever
+    saturated, which makes the value a lower bound set by the end of the
+    sweep rather than a measured knee. Reporting a censored value as a knee
+    understates the topology and misstates the evidence, so every consumer
+    has to know the difference."""
     sel = [r for r in rows
            if r["topology"] == topology and r["traffic"] == traffic
            and r["vc_mode"] == mode]
     sel.sort(key=lambda r: r["offered_rate"])
+    if not sel:
+        return 0.0, False
     best = 0.0
     for r in sel:
         if r["saturated"] == 0 and r["dropped_full"] == 0:
             best = r["offered_rate"]
         else:
             break
-    return best
+    censored = all(r["saturated"] == 0 and r["dropped_full"] == 0 for r in sel)
+    return best, censored
 
 
 # --------------------------------------------------------------------------
@@ -280,13 +342,14 @@ def fig_throughput(rows, outpath):
         if not x:
             continue
         ax.plot(x, y, marker=marker, linestyle=ls, linewidth=1.5,
-                markersize=4.5, label=f"{topo} / {traf}")
+                markersize=4.5,
+                label=f"{topo} / {traf} ({USABLE_VC_NOTE[topo]})")
     lim = max(r["offered_rate"] for r in rows)
     ax.plot([0, lim], [0, lim], color="0.4", linewidth=1.0,
             label="ideal (accepted = offered)")
     ax.set_xlabel("offered injection rate (flits/node/cycle)")
     ax.set_ylabel("accepted throughput (flits/node/cycle)")
-    ax.set_title("Accepted throughput vs offered load (equal usable VCs per packet)")
+    ax.set_title("Accepted throughput vs offered load")
     ax.grid(True, alpha=0.3)
     ax.legend(fontsize=9)
     fig.tight_layout()
@@ -559,6 +622,17 @@ def main():
                   f"{m['peak_channel_load']:9.3f} {m['lam_channel']:9.3f} "
                   f"{m['lam_eject']:10.3f} {m['lam_bisection']:10.3f} "
                   f"{m['lam_star']:7.3f} {ach:9.2f} {ach / m['lam_star']:6.2f}")
+
+    censored = [(t, p) for t in TOPOS for p in ("uniform", "hotnode")
+                if saturation_with_censoring(rows, t, p, HEADLINE_MODE[t])[1]
+                and series(rows, t, p, HEADLINE_MODE[t], "avg_latency")[0]]
+    if censored:
+        print("\nWARNING: these configurations never saturated within the swept "
+              "range, so their saturation rates are lower bounds, not knees:")
+        for t, p in censored:
+            print(f"   {t}/{p} — extend injection_rates past "
+                  f"{max(r['offered_rate'] for r in rows):.2f}")
+        print()
 
     fig_latency_by_traffic(rows, "uniform",
                            os.path.join(fdir, "fig1_latency_uniform.png"),

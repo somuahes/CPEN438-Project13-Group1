@@ -1,7 +1,7 @@
 topology,traffic,diameter,bisection_bandwidth_links,avg_hops_model,zero_load_latency_measured,saturation_rate_measured,peak_accepted_throughput,latency_at_0.20,vc_budget
-ring,uniform,8,2,4.267,8.57,0.28,0.2724,18.63,2 VCs / 1 usable
+ring,uniform,8,2,4.267,8.57,0.28,0.2731,18.63,2 VCs / 1 usable
 ring,hotnode,8,2,4.267,8.56,0.20,0.2416,174.73,2 VCs / 1 usable
-mesh,uniform,6,4,2.667,6.88,0.70,0.7239,7.86,2 VCs / 2 usable
-mesh,hotnode,6,4,2.533,6.73,0.20,0.3849,23.09,2 VCs / 2 usable
-torus,uniform,4,8,2.133,6.27,0.80,0.8000,7.00,4 VCs / 2 usable
-torus,hotnode,4,8,2.133,6.26,0.28,0.5207,8.46,4 VCs / 2 usable
+mesh,uniform,6,4,2.667,6.88,0.70,0.7360,7.86,2 VCs / 2 usable
+mesh,hotnode,6,4,2.533,6.73,0.20,0.3900,23.09,2 VCs / 2 usable
+torus,uniform,4,8,2.133,6.27,0.94,0.9055,7.00,4 VCs / 2 usable
+torus,hotnode,4,8,2.133,6.26,0.28,0.5229,8.46,4 VCs / 2 usable
