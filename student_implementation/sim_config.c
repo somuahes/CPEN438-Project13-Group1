@@ -23,7 +23,7 @@ void sim_config_defaults(sim_config_t *c) {
     };
     c->nrates = (int)(sizeof(dflt) / sizeof(dflt[0]));
     for (int i = 0; i < c->nrates; i++) c->rates[i] = dflt[i];
-    snprintf(c->outdir, sizeof(c->outdir), "results");
+    snprintf(c->outdir, sizeof(c->outdir), "results/raw");
 }
 
 static char *trim(char *s) {

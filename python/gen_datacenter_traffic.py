@@ -134,7 +134,7 @@ class Traffic:
 def write_trace(path, pattern, count, **kw):
     t = Traffic(pattern, **kw)
     with open(path, "w", newline="") as fh:
-        w = csv.writer(fh)
+        w = csv.writer(fh, lineterminator="\n")
         w.writerow(["pattern", "index", "src", "dst"])
         for i in range(count):
             src = i % t.num_nodes
@@ -195,8 +195,9 @@ def main():
     ap.add_argument("--seed", type=int, default=DEFAULT_SEED)
     ap.add_argument("--num-hot", type=int, default=DEFAULT_HOT_NODES)
     ap.add_argument("--hot-fraction", type=float, default=DEFAULT_HOT_FRACTION)
-    ap.add_argument("--count", type=int, default=2000, help="packets per trace")
-    ap.add_argument("--outdir", default=os.path.join(os.path.dirname(__file__), "..", "results"))
+    ap.add_argument("--count", type=int, default=5000,
+                help="packets per trace; 5000 reproduces the committed traces")
+    ap.add_argument("--outdir", default=os.path.join(os.path.dirname(__file__), "..", "traces"))
     ap.add_argument("--verify", metavar="CSV", help="compare against the C reference trace")
     ap.add_argument("--summary", action="store_true", help="print destination statistics")
     args = ap.parse_args()

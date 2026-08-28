@@ -6,13 +6,4 @@ test_simulator
 run_sweep
 dump_traffic
 
-# Pipeline output (curated copies live in results/raw and results/processed)
-results/traffic_reference_c.csv
-results/week3_sweep_results.csv
-results/week3_saturation_summary.csv
-results/week3_sweep_console.txt
-results/week3_results_table.csv
-results/week3_model_vs_measured.csv
-results/week3_innovation_table.csv
-
 __pycache__/

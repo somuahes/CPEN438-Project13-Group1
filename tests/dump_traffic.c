@@ -10,7 +10,7 @@
  * same traffic, which is what "reproducibility" means for this project.
  *
  * Usage:  ./dump_traffic [count]      (default 2000)
- * Output: results/traffic_reference_c.csv
+ * Output: results/raw/traffic_reference_c.csv (override with argv[2])
  *
  * Build (from repository root):
  *   gcc -O2 -Wall -Wextra -std=c11 -Istudent_implementation \
@@ -30,8 +30,9 @@
 int main(int argc, char **argv) {
     int count = (argc > 1) ? atoi(argv[1]) : 2000;
 
-    FILE *f = fopen("results/traffic_reference_c.csv", "w");
-    if (!f) { fprintf(stderr, "cannot write results/traffic_reference_c.csv\n"); return 1; }
+    const char *out = (argc > 2) ? argv[2] : "results/raw/traffic_reference_c.csv";
+    FILE *f = fopen(out, "w");
+    if (!f) { fprintf(stderr, "cannot write %s\n", out); return 1; }
     fprintf(f, "pattern,index,src,dst\n");
 
     traffic_type_t types[2] = { TRAFFIC_UNIFORM, TRAFFIC_HOTNODE };
@@ -50,6 +51,6 @@ int main(int argc, char **argv) {
         }
     }
     fclose(f);
-    printf("wrote %d pairs per pattern to results/traffic_reference_c.csv\n", count);
+    printf("wrote %d pairs per pattern to %s\n", count, out);
     return 0;
 }

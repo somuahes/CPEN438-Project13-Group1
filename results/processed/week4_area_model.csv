@@ -1,0 +1,4 @@
+topology,links,degree,wire_pitches,max_span,ports,crossbar_units,vcs,usable_vcs,buffer_flits,area_ratio_vs_torus,chip_area_overhead
+ring,16,2,18,3,3,144,2,1,384,0.3568,0.0235
+mesh,24,4,24,1,5,400,2,2,640,0.5357,0.0354
+torus,32,4,48,2,5,400,4,2,1280,1.0000,0.0660

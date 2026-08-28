@@ -432,7 +432,7 @@ def fig_vc_cost(rows, outpath):
 
 def write_results_table(rows, models, path):
     with open(path, "w", newline="") as fh:
-        w = csv.writer(fh)
+        w = csv.writer(fh, lineterminator="\n")
         w.writerow(["topology", "traffic", "diameter", "bisection_bandwidth_links",
                     "avg_hops_model", "zero_load_latency_measured",
                     "saturation_rate_measured", "peak_accepted_throughput",
@@ -460,7 +460,7 @@ def write_results_table(rows, models, path):
 
 def write_model_table(rows, models, path):
     with open(path, "w", newline="") as fh:
-        w = csv.writer(fh)
+        w = csv.writer(fh, lineterminator="\n")
         w.writerow(["topology", "traffic", "avg_hops", "peak_channel_load",
                     "lam_channel", "lam_eject", "lam_classical_bisection",
                     "lam_star_model", "zero_load_latency_model",
@@ -487,7 +487,7 @@ def write_model_table(rows, models, path):
 
 def write_innovation_table(rows, path, knee=0.24):
     with open(path, "w", newline="") as fh:
-        w = csv.writer(fh)
+        w = csv.writer(fh, lineterminator="\n")
         w.writerow(["topology", "vc_mode", "description", "vcs", "queues",
                     "offered_rate", "background_latency", "hot_latency",
                     "accepted_throughput", "peak_accepted_throughput",
@@ -522,14 +522,27 @@ def write_innovation_table(rows, path, knee=0.24):
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     ap = argparse.ArgumentParser()
-    ap.add_argument("--results", default=os.path.join(here, "..", "results"))
+    ap.add_argument("--results", default=os.path.join(here, "..", "results"),
+                    help="results root holding raw/, processed/ and figures/")
+    ap.add_argument("--raw", help="override the raw-results directory")
+    ap.add_argument("--processed", help="override the tables directory")
+    ap.add_argument("--figures", help="override the figures directory")
     args = ap.parse_args()
 
     rdir = os.path.abspath(args.results)
-    fdir = os.path.join(rdir, "figures")
-    os.makedirs(fdir, exist_ok=True)
+    raw = os.path.abspath(args.raw) if args.raw else os.path.join(rdir, "raw")
+    pdir = os.path.abspath(args.processed) if args.processed else os.path.join(rdir, "processed")
+    fdir = os.path.abspath(args.figures) if args.figures else os.path.join(rdir, "figures")
+    for d in (pdir, fdir):
+        os.makedirs(d, exist_ok=True)
 
-    rows = load_sweep(os.path.join(rdir, "week3_sweep_results.csv"))
+    sweep = os.path.join(raw, "week3_sweep_results.csv")
+    if not os.path.exists(sweep):
+        raise SystemExit(
+            f"sweep results not found: {sweep}\n"
+            "Run ./run_sweep first, or point --raw at the directory holding "
+            "week3_sweep_results.csv.")
+    rows = load_sweep(sweep)
     models = {(t, p): analytical_model(t, p)
               for t in TOPOS for p in ("uniform", "hotnode")}
 
@@ -559,14 +572,14 @@ def main():
     fig_saturation_bar(rows, models, os.path.join(fdir, "fig7_saturation.png"))
     fig_vc_cost(rows, os.path.join(fdir, "fig8_vc_cost.png"))
 
-    write_results_table(rows, models, os.path.join(rdir, "week3_results_table.csv"))
-    write_model_table(rows, models, os.path.join(rdir, "week3_model_vs_measured.csv"))
-    write_innovation_table(rows, os.path.join(rdir, "week3_innovation_table.csv"))
+    write_results_table(rows, models, os.path.join(pdir, "week3_results_table.csv"))
+    write_model_table(rows, models, os.path.join(pdir, "week3_model_vs_measured.csv"))
+    write_innovation_table(rows, os.path.join(pdir, "week3_innovation_table.csv"))
 
     print("\nFigures written to", fdir)
     for f in sorted(os.listdir(fdir)):
         print("  ", f)
-    print("Tables written to", rdir)
+    print("Tables written to", pdir)
 
 
 if __name__ == "__main__":

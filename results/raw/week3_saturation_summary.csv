@@ -11,3 +11,8 @@ ring,hotnode,vc4_class,4,8,2,8.5600,0.2000,0.2400,0.301672
 mesh,hotnode,vc4_class,4,6,4,6.7299,0.2400,0.2800,0.568042
 ring,uniform,vc4_class,4,8,2,8.5723,0.2800,0.3200,0.272417
 mesh,uniform,vc4_class,4,6,4,6.8783,0.7000,0.8000,0.724094
+torus,uniform,baseline_vc2,2,4,8,6.2758,0.6000,0.7000,0.584297
+torus,hotnode,baseline_vc2,2,4,8,6.2471,0.2400,0.2800,0.399625
+torus,uniform,vc4_plain,4,4,8,6.2653,0.8000,-1.0000,0.800000
+torus,hotnode,vc4_plain,4,4,8,6.2565,0.2800,0.3200,0.520667
+torus,hotnode,vc4_class,4,4,8,6.2430,0.2400,0.2800,0.588734

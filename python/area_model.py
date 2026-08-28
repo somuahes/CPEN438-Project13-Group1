@@ -169,7 +169,7 @@ def add_overhead(costs):
 def main():
     ap = argparse.ArgumentParser()
     here = os.path.dirname(os.path.abspath(__file__))
-    ap.add_argument("--outdir", default=os.path.join(here, "..", "results"))
+    ap.add_argument("--outdir", default=os.path.join(here, "..", "results", "processed"))
     args = ap.parse_args()
     outdir = os.path.abspath(args.outdir)
     os.makedirs(outdir, exist_ok=True)

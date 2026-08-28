@@ -19,8 +19,8 @@
  * asserts the conservation identity
  *     generated == delivered + dropped + in_network + queued.
  *
- * Output: results/week3_sweep_results.csv
- *         results/week3_saturation_summary.csv
+ * Output: results/raw/week3_sweep_results.csv
+ *         results/raw/week3_saturation_summary.csv
  *
  * Build (from repository root):
  *   gcc -O2 -Wall -Wextra -std=c11 -Istudent_implementation \
@@ -45,7 +45,7 @@ static void usage(const char *prog) {
            "  --seed S         traffic seed\n"
            "  --topology LIST  comma-separated: ring,mesh,torus (default all)\n"
            "  --rates LIST     injection rates, comma- or space-separated\n"
-           "  --outdir DIR     results directory (default results)\n"
+           "  --outdir DIR     raw-results directory (default results/raw)\n"
            "  --help\n", prog, SIM_CONFIG_DEFAULT);
 }
 

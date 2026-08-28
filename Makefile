@@ -24,25 +24,21 @@ run_sweep:       $(SRC) $(CFG) tests/run_sweep.c
 dump_traffic:    student_implementation/traffic.c tests/dump_traffic.c
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
-# Full Week 3 pipeline: verify Week 2, test Week 3, sweep, analyse.
-week3: all
-	./test_topology
-	./verify_topology
-	./test_simulator
-	./dump_traffic 3000
-	python3 python/gen_datacenter_traffic.py --verify results/traffic_reference_c.csv
-	./run_sweep | tee results/week3_sweep_console.txt
-	python3 python/analyze_network_results.py
+# Full Week 3 pipeline, kept as an alias so existing instructions still work.
+week3: week4
 
-# Full Week 4 pipeline: everything in week3, plus the folded-torus sweep
-# and the area/wiring-cost model.
+# Full Week 4 pipeline: rebuilds every binary, re-runs the Week 2 and Week 3
+# test suites, cross-checks the C and Python traffic generators, runs the
+# ring/mesh/torus sweep, and regenerates every reported figure and table.
+# Raw output lands in results/raw, tables in results/processed, figures in
+# results/figures -- the same layout that is committed.
 week4: all
 	./test_topology
 	./verify_topology
 	./test_simulator
 	./dump_traffic 3000
-	python3 python/gen_datacenter_traffic.py --verify results/traffic_reference_c.csv
-	./run_sweep | tee results/week3_sweep_console.txt
+	python3 python/gen_datacenter_traffic.py --verify results/raw/traffic_reference_c.csv
+	./run_sweep | tee results/raw/week3_sweep_console.txt
 	python3 python/analyze_network_results.py
 	python3 python/area_model.py
 
