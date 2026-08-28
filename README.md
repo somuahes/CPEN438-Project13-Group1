@@ -24,12 +24,13 @@ technical report.
 
 ## 2. Team
 
-| Member | Primary contribution (per Git history) |
-|---|---|
-| Peggy Somuah (`somuahes`) | Project charter, requirements specification, architecture and topology diagrams, paper review, assigned configuration |
-| Vanessa Ayertey | Ring and mesh topology construction, dimension-order routing, Week 2 unit tests and verification driver |
-| Ebo Okrah (`bernardinee`) | Flit-level simulation core, virtual channels and credit-based flow control, traffic generators, sweep driver, analysis pipeline |
-| Haqq Bassit | Folded-torus extension and area model, simulator hardening, configuration and driver parameterisation, technical report, reproducibility package |
+| Member | ID | Primary contribution |
+|---|---|---|
+| Ayertey Vanessa Esinam | 11264010 | Ring and mesh topology construction, dimension-order routing, Week 2 unit tests and verification driver |
+| Peggy Esinam Somuah | 11049523 | Project charter, requirements specification, architecture and topology diagrams, paper review, assigned configuration |
+| Bernardine Adusei-Okrah | 11123762 | Flit-level simulation core, virtual channels and credit-based flow control, traffic generators, sweep driver, analysis pipeline, innovation component |
+| Haqq Munagah | 11117536 | Folded-torus extension and area model, simulator hardening, configuration and driver parameterisation, technical report, reproducibility package |
+| Farouk Sedick | 10947554 | Independent reproducibility check and verification of reported results |
 
 > Role assignments per Part I §9 are recorded in each member's individual
 > contribution form. The table above reflects the Git history, not the formal role

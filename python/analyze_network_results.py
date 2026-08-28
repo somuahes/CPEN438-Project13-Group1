@@ -295,9 +295,10 @@ def fig_throughput(rows, outpath):
 
 
 def fig_model_validation(rows, models, outpath):
-    fig, axes = plt.subplots(2, 3, figsize=(13.2, 6.8), sharex=True)
-    combos = [("ring", "uniform"), ("mesh", "uniform"), ("torus", "uniform"),
-              ("ring", "hotnode"), ("mesh", "hotnode"), ("torus", "hotnode")]
+    fig, axes = plt.subplots(3, 2, figsize=(8.2, 9.4), sharex=True)
+    combos = [("ring", "uniform"), ("ring", "hotnode"),
+              ("mesh", "uniform"), ("mesh", "hotnode"),
+              ("torus", "uniform"), ("torus", "hotnode")]
     for ax, (topo, traf) in zip(axes.ravel(), combos):
         m = models[(topo, traf)]
         xs = [0.005 + i * (0.98 * m["lam_star"] - 0.005) / 199 for i in range(200)]
@@ -313,7 +314,7 @@ def fig_model_validation(rows, models, outpath):
                      fontsize=10)
         ax.grid(True, which="both", alpha=0.3)
         ax.legend(fontsize=8, loc="upper left")
-    for ax in axes[1]:
+    for ax in axes[-1]:
         ax.set_xlabel("offered injection rate (flits/node/cycle)")
     for ax in axes[:, 0]:
         ax.set_ylabel("average latency (cycles)")
