@@ -1,0 +1,6 @@
+# Python dependencies for the analysis pipeline (python/analyze_network_results.py).
+# Install with:  python3 -m pip install -r requirements.txt
+#
+# The traffic generator (gen_datacenter_traffic.py) and the area model
+# (area_model.py) use only the standard library and need nothing here.
+matplotlib>=3.5
